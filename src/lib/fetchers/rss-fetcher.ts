@@ -1,7 +1,7 @@
 import Parser from "rss-parser";
 import { categorizeItem } from "@/lib/filters/categorizer";
 import { FEED_SOURCES } from "@/lib/config/sources";
-import { isXBrowserMode } from "@/lib/fetchers/x-browser";
+import { checkXBrowserSession } from "@/lib/fetchers/x-browser";
 import type { Alert, FeedSource } from "@/lib/types";
 
 const parser = new Parser({
@@ -70,11 +70,14 @@ export async function fetchAllRssAlerts(): Promise<{
   alerts: Alert[];
   activeSources: string[];
   failedSources: string[];
+  xFallbackMode: boolean;
 }> {
+  const browserSession = await checkXBrowserSession();
+  const useNitterFallback = !browserSession.loggedIn;
+
   const enabled = FEED_SOURCES.filter((s) => {
     if (!s.enabled) return false;
-    // Modo navegador: X se scrapea con Playwright, no Nitter
-    if (isXBrowserMode() && s.type === "twitter_rss") return false;
+    if (s.type === "twitter_rss") return useNitterFallback;
     return true;
   });
   const results = await Promise.allSettled(
@@ -100,5 +103,5 @@ export async function fetchAllRssAlerts(): Promise<{
       new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   );
 
-  return { alerts, activeSources, failedSources };
+  return { alerts, activeSources, failedSources, xFallbackMode: useNitterFallback };
 }

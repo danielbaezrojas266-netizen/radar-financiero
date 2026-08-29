@@ -29,9 +29,24 @@ export function extractXUsername(sourceName: string): string | null {
   return match ? match[1].toLowerCase() : null;
 }
 
+/** IDs Nitter fallback → equivalencia con cuentas X aprobadas */
+const NITTER_USER_MAP: Record<string, string> = {
+  "nitter-federalreserve": "federalreserve",
+  "nitter-reuters": "reuters",
+  "nitter-business": "business",
+  "nitter-fxstreet": "fxstreet",
+  "nitter-whale-alert": "whale_alert",
+  "nitter-sec": "sec_news",
+  "nitter-ecb": "ecb",
+};
+
 export function isApprovedSource(sourceId: string, sourceName: string): boolean {
   if (APPROVED_RSS_IDS.has(sourceId)) return true;
   if (BLOCKCHAIN_SOURCE_IDS.has(sourceId)) return true;
+
+  const nitterUser = NITTER_USER_MAP[sourceId];
+  if (nitterUser && APPROVED_X_USERNAMES.has(nitterUser)) return true;
+
   if (sourceId.startsWith("x-browser-")) {
     const user = sourceId.replace("x-browser-", "").toLowerCase();
     return APPROVED_X_USERNAMES.has(user);

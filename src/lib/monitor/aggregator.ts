@@ -52,7 +52,9 @@ export async function runScan(): Promise<ScanResult> {
     fetchPrices(),
   ]);
 
-  const xResult = await fetchXBrowserAlerts();
+  const xResult = rssResult.xFallbackMode
+    ? { alerts: [], activeAccounts: [], failedAccounts: [], loggedIn: false }
+    : await fetchXBrowserAlerts();
 
   const btcPrice =
     prices.find((p) => p.symbol === "BTC/USD")?.price ?? 95000;
@@ -87,7 +89,18 @@ export async function runScan(): Promise<ScanResult> {
     (a) => new Date(a.publishedAt) >= todayStart
   ).length;
 
-  const xSourceCount = xResult.loggedIn ? xResult.activeAccounts.length : 0;
+  const xSourceCount = xResult.loggedIn
+    ? xResult.activeAccounts.length
+    : rssResult.xFallbackMode
+      ? rssResult.activeSources.filter((id) => id.startsWith("nitter-")).length
+      : 0;
+
+  const rssOnlyCount = FEED_SOURCES.filter(
+    (s) => s.enabled && s.type !== "twitter_rss"
+  ).length;
+  const nitterCount = FEED_SOURCES.filter(
+    (s) => s.enabled && s.type === "twitter_rss"
+  ).length;
 
   return {
     alerts: allAlerts,
@@ -99,8 +112,7 @@ export async function runScan(): Promise<ScanResult> {
       lastScan: lastScanTime,
       sourcesActive: rssResult.activeSources.length + xSourceCount,
       sourcesTotal:
-        FEED_SOURCES.filter((s) => s.enabled && s.type !== "twitter_rss")
-          .length + (xResult.loggedIn ? xResult.activeAccounts.length : 0),
+        rssOnlyCount + (rssResult.xFallbackMode ? nitterCount : xResult.loggedIn ? xResult.activeAccounts.length : 0),
       alertsToday,
       isScanning: false,
     },
