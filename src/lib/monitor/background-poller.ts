@@ -29,7 +29,7 @@ export function startBackgroundPoller(): void {
   // Mensaje de arranque
   if (isTelegramConfigured()) {
     sendTelegramMessage(
-      "✅ <b>Market Radar activo</b>\nMonitoreo 24/7 iniciado. Recibirás alertas de Fed, macro, geopolítica, ballenas BTC y regulación."
+      "✅ <b>Radar Financiero activo</b>\nMonitoreo 24/7 iniciado. Recibirás alertas de Fed, macro, geopolítica, ballenas BTC y regulación."
     ).catch(() => {});
   } else {
     console.warn(

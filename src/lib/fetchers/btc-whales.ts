@@ -79,7 +79,7 @@ export async function fetchWhaleAlerts(btcPrice = 95000): Promise<Alert[]> {
           summary,
           url: `https://blockchair.com/bitcoin/transaction/${tx.hash}`,
           source: "blockchain" as const,
-          sourceName: "Blockchair On-chain",
+          sourceName: "Blockchair — Cadena en vivo",
           publishedAt: publishedAt.toISOString(),
           assets: ["BTC" as const],
           keywords: ["whale", "on-chain"],

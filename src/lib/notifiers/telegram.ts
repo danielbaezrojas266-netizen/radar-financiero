@@ -1,4 +1,13 @@
 import type { Alert, AlertCategory } from "@/lib/types";
+import { translateAlertText } from "@/lib/notifiers/translate";
+
+const CATEGORY_LABELS_ES: Record<AlertCategory, string> = {
+  fed: "Fed / Tasas de interés",
+  macro: "Macro (CPI/PPI/Empleo)",
+  geopolitics: "Geopolítica / Oro",
+  btc_whale: "Ballenas BTC",
+  btc_regulation: "Regulación BTC",
+};
 
 const CATEGORY_EMOJI: Record<AlertCategory, string> = {
   fed: "🏛️",
@@ -8,10 +17,15 @@ const CATEGORY_EMOJI: Record<AlertCategory, string> = {
   btc_regulation: "⚖️",
 };
 
-const PRIORITY_LABEL = {
+const PRIORITY_LABEL_ES = {
   critical: "🔴 CRÍTICO",
   high: "🟠 ALTO",
   medium: "🟡 MEDIO",
+};
+
+const ASSET_LABELS: Record<string, string> = {
+  XAU: "Oro",
+  BTC: "Bitcoin",
 };
 
 function escapeHtml(text: string): string {
@@ -27,19 +41,23 @@ export function isTelegramConfigured(): boolean {
   );
 }
 
-export function formatAlertMessage(alert: Alert): string {
+export async function formatAlertMessage(alert: Alert): Promise<string> {
+  const { title, summary } = await translateAlertText(alert.title, alert.summary);
+
   const emoji = CATEGORY_EMOJI[alert.category];
-  const priority = PRIORITY_LABEL[alert.priority];
-  const assets = alert.assets.join(" · ");
+  const category = CATEGORY_LABELS_ES[alert.category];
+  const priority = PRIORITY_LABEL_ES[alert.priority];
+  const assets = alert.assets.map((a) => ASSET_LABELS[a] ?? a).join(" · ");
   const link = alert.url
     ? `\n<a href="${escapeHtml(alert.url)}">Ver fuente →</a>`
     : "";
 
   return [
     `<b>${emoji} ${priority}</b>`,
-    `<b>${escapeHtml(alert.title)}</b>`,
-    alert.summary ? escapeHtml(alert.summary.slice(0, 300)) : "",
-    `\n📌 ${escapeHtml(alert.sourceName)} · ${assets}`,
+    `<i>${category}</i>`,
+    `<b>${escapeHtml(title)}</b>`,
+    summary ? escapeHtml(summary.slice(0, 300)) : "",
+    `\n📌 Fuente: ${escapeHtml(alert.sourceName)} · ${assets}`,
     link,
   ]
     .filter(Boolean)
@@ -88,10 +106,10 @@ export async function sendAlertsToTelegram(alerts: Alert[]): Promise<number> {
 
   let sent = 0;
   for (const alert of alerts) {
-    const ok = await sendTelegramMessage(formatAlertMessage(alert));
+    const message = await formatAlertMessage(alert);
+    const ok = await sendTelegramMessage(message);
     if (ok) sent++;
-    // Evitar rate limit de Telegram (~30 msg/s, ser conservadores)
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 400));
   }
   return sent;
 }

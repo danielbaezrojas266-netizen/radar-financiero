@@ -6,7 +6,7 @@ import type { Alert, FeedSource } from "@/lib/types";
 const parser = new Parser({
   timeout: 12000,
   headers: {
-    "User-Agent": "MarketRadar/1.0 (Financial Monitoring)",
+    "User-Agent": "RadarFinanciero/1.0 (Financial Monitoring)",
     Accept: "application/rss+xml, application/xml, text/xml",
   },
 });

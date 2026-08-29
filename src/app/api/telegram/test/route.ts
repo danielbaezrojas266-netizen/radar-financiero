@@ -19,7 +19,7 @@ export async function POST() {
   }
 
   const ok = await sendTelegramMessage(
-    "🧪 <b>Test Radar Financiero</b>\nConexión Telegram OK. Recibirás alertas en tiempo real."
+    "🧪 <b>Prueba — Radar Financiero</b>\nConexión con Telegram correcta. Recibirás alertas en español en tiempo real."
   );
 
   return NextResponse.json({ ok, message: ok ? "Mensaje enviado" : "Error al enviar" });
