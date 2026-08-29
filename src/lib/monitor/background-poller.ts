@@ -48,7 +48,7 @@ export function startBackgroundPoller(): void {
         );
       }
 
-      // Resúmenes 7:30 y 16:30 hora local
+      // Resúmenes 7:00 y 16:30 hora local
       const slot = shouldSendDigest();
       if (slot) {
         const queued = flushDigestQueue();
@@ -68,7 +68,7 @@ export function startBackgroundPoller(): void {
     sendTelegramMessage(
       `✅ <b>Filtro estricto activo</b>\n\n` +
         `🚨 Instantáneo: solo Cat. 1 (CPI/PPI, Fed, quiebras, regulación fuerte BTC, guerra/oro)\n` +
-        `📋 Resumen: 2×/día a las 7:30 y 16:30 (${tz})\n` +
+        `📋 Resumen: 2×/día a las 7:00 y 16:30 (${tz})\n` +
         `🔇 Ignorado: opiniones, TA, memes, cuentas no institucionales`
     ).catch(() => {});
   }

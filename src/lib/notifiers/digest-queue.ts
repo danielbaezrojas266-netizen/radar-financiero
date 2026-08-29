@@ -58,7 +58,7 @@ export function getDigestQueueSize(): number {
 }
 
 export function getTimezone(): string {
-  return process.env.TELEGRAM_TIMEZONE || "Europe/Madrid";
+  return process.env.TELEGRAM_TIMEZONE || "Etc/GMT+6";
 }
 
 export function getLocalDateKey(timezone: string): string {
@@ -86,9 +86,9 @@ export function getLocalTimeMinutes(timezone: string): number {
   return hour * 60 + minute;
 }
 
-/** Ventanas: 7:30 AM y 4:30 PM hora local */
+/** Ventanas: 7:00 AM y 4:30 PM hora local (UTC-6) */
 const DIGEST_SLOTS = [
-  { key: "morning" as const, hour: 7, minute: 30 },
+  { key: "morning" as const, hour: 7, minute: 0 },
   { key: "afternoon" as const, hour: 16, minute: 30 },
 ];
 
