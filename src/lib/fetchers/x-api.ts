@@ -129,12 +129,14 @@ export async function fetchXAlerts(): Promise<{
 
   results.forEach((result, index) => {
     const account = X_ACCOUNTS[index];
-    if (result.status === "fulfilled") {
+    if (result.status === "fulfilled" && result.value.length > 0) {
       activeAccounts.push(account.username);
       alerts.push(...result.value);
+    } else if (result.status === "fulfilled" && result.value.length === 0) {
+      failedAccounts.push(account.username);
     } else {
       failedAccounts.push(account.username);
-      console.error(`[X API] Falló @${account.username}:`, result.reason);
+      console.error(`[X API] Falló @${account.username}:`, result.status === "rejected" ? result.reason : "sin tweets");
     }
   });
 
