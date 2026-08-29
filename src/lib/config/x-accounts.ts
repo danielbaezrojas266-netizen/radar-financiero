@@ -8,7 +8,7 @@ export interface XAccount {
   assets: ("XAU" | "BTC")[];
 }
 
-/** Cuentas institucionales en X — sin influencers ni ruido */
+/** Solo cuentas oficiales e institucionales de alto impacto */
 export const X_ACCOUNTS: XAccount[] = [
   {
     username: "federalreserve",
@@ -18,30 +18,30 @@ export const X_ACCOUNTS: XAccount[] = [
     assets: ["XAU", "BTC"],
   },
   {
-    username: "JeromeHPowell",
-    name: "X — @JeromeHPowell",
+    username: "Reuters",
+    name: "X — @Reuters",
     credibility: 10,
-    categories: ["fed"],
+    categories: ["macro", "geopolitics", "fed"],
     assets: ["XAU", "BTC"],
   },
   {
-    username: "ecb",
-    name: "X — @ecb",
+    username: "business",
+    name: "X — @business",
+    credibility: 10,
+    categories: ["macro", "geopolitics", "btc_regulation"],
+    assets: ["XAU", "BTC"],
+  },
+  {
+    username: "FXStreet",
+    name: "X — @FXStreet",
     credibility: 9,
-    categories: ["fed", "macro"],
-    assets: ["XAU", "BTC"],
-  },
-  {
-    username: "FirstSquawk",
-    name: "X — @FirstSquawk",
-    credibility: 8,
     categories: ["macro", "fed"],
     assets: ["XAU", "BTC"],
   },
   {
     username: "whale_alert",
     name: "X — @whale_alert",
-    credibility: 8,
+    credibility: 9,
     categories: ["btc_whale"],
     assets: ["BTC"],
   },
@@ -51,5 +51,12 @@ export const X_ACCOUNTS: XAccount[] = [
     credibility: 10,
     categories: ["btc_regulation"],
     assets: ["BTC"],
+  },
+  {
+    username: "ecb",
+    name: "X — @ecb",
+    credibility: 10,
+    categories: ["fed", "macro"],
+    assets: ["XAU", "BTC"],
   },
 ];

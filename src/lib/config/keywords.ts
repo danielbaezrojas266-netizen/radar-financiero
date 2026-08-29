@@ -5,6 +5,8 @@ export const NOISE_PATTERNS = [
   /\b(airdrop|giveaway|nft\s+mint|memecoin|shitcoin)\b/i,
   /\b(not\s+financial\s+advice|nfa\b|dyor)\b/i,
   /\b(breaking\s*:\s*elon|just\s+in:\s*elon)\b/i,
+  /\b(gm frens|good morning ct|crypto twitter)\b/i,
+  /\b(altseason|alt season|pumpamentals)\b/i,
 ];
 
 export const CATEGORY_KEYWORDS: Record<

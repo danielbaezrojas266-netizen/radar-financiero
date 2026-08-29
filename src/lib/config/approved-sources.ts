@@ -1,0 +1,42 @@
+/** IDs de fuentes RSS aprobadas — solo institucionales y alto impacto */
+export const APPROVED_RSS_IDS = new Set([
+  "fed-press",
+  "fed-speeches",
+  "bls-news",
+  "bea-news",
+  "reuters-markets",
+  "reuters-business",
+  "sec-press",
+  "cftc-press",
+]);
+
+/** Usernames de X aprobados (minúsculas) */
+export const APPROVED_X_USERNAMES = new Set([
+  "reuters",
+  "fxstreet",
+  "business",
+  "whale_alert",
+  "sec_news",
+  "federalreserve",
+  "ecb",
+]);
+
+/** Fuentes on-chain — solo resumen, nunca instantáneo */
+export const BLOCKCHAIN_SOURCE_IDS = new Set(["blockchain-whale"]);
+
+export function extractXUsername(sourceName: string): string | null {
+  const match = sourceName.match(/@([a-zA-Z0-9_]+)/i);
+  return match ? match[1].toLowerCase() : null;
+}
+
+export function isApprovedSource(sourceId: string, sourceName: string): boolean {
+  if (APPROVED_RSS_IDS.has(sourceId)) return true;
+  if (BLOCKCHAIN_SOURCE_IDS.has(sourceId)) return true;
+  if (sourceId.startsWith("x-browser-")) {
+    const user = sourceId.replace("x-browser-", "").toLowerCase();
+    return APPROVED_X_USERNAMES.has(user);
+  }
+  const xUser = extractXUsername(sourceName);
+  if (xUser && APPROVED_X_USERNAMES.has(xUser)) return true;
+  return false;
+}

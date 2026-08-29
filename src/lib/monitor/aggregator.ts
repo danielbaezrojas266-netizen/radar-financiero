@@ -2,6 +2,7 @@ import { fetchWhaleAlerts } from "@/lib/fetchers/btc-whales";
 import { fetchPrices } from "@/lib/fetchers/prices";
 import { fetchAllRssAlerts } from "@/lib/fetchers/rss-fetcher";
 import { fetchXBrowserAlerts } from "@/lib/fetchers/x-browser";
+import { applyDeliveryRules, type AlertWithTier } from "@/lib/filters/delivery-rules";
 import { FEED_SOURCES } from "@/lib/config/sources";
 import type { Alert, MonitorStatus, PriceSnapshot } from "@/lib/types";
 
@@ -37,8 +38,10 @@ function sortAlerts(alerts: Alert[]): Alert[] {
 }
 
 export interface ScanResult {
-  alerts: Alert[];
-  newAlerts: Alert[];
+  alerts: AlertWithTier[];
+  newAlerts: AlertWithTier[];
+  instantAlerts: AlertWithTier[];
+  digestAlerts: AlertWithTier[];
   prices: PriceSnapshot[];
   status: MonitorStatus;
 }
@@ -55,11 +58,17 @@ export async function runScan(): Promise<ScanResult> {
     prices.find((p) => p.symbol === "BTC/USD")?.price ?? 95000;
   const whaleAlerts = await fetchWhaleAlerts(btcPrice);
 
-  const allAlerts = dedupeAlerts(
-    sortAlerts([...rssResult.alerts, ...xResult.alerts, ...whaleAlerts])
+  const filtered = applyDeliveryRules(
+    dedupeAlerts(
+      sortAlerts([...rssResult.alerts, ...xResult.alerts, ...whaleAlerts])
+    )
   );
 
+  const allAlerts: AlertWithTier[] = filtered;
   const newAlerts = allAlerts.filter((a) => !seenIds.has(a.id));
+  const instantAlerts = newAlerts.filter((a) => a.deliveryTier === "instant");
+  const digestAlerts = newAlerts.filter((a) => a.deliveryTier === "digest");
+
   for (const alert of allAlerts) {
     seenIds.add(alert.id);
   }
@@ -83,6 +92,8 @@ export async function runScan(): Promise<ScanResult> {
   return {
     alerts: allAlerts,
     newAlerts,
+    instantAlerts,
+    digestAlerts,
     prices,
     status: {
       lastScan: lastScanTime,

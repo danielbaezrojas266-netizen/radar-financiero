@@ -73,6 +73,7 @@ export async function fetchWhaleAlerts(btcPrice = 95000): Promise<Alert[]> {
       if (alerts.length === 0) {
         return {
           id: `whale-${tx.hash}`,
+          sourceId: "blockchain-whale",
           category: "btc_whale" as const,
           priority: btcAmount >= 1000 ? "critical" : "high",
           title,

@@ -24,7 +24,7 @@ export function getXBrowserStatus() {
 
 function accountToFeedSource(account: (typeof X_ACCOUNTS)[0]): FeedSource {
   return {
-    id: `x-browser-${account.username}`,
+    id: `x-browser-${account.username.toLowerCase()}`,
     name: account.name,
     url: `https://x.com/${account.username}`,
     type: "rss",

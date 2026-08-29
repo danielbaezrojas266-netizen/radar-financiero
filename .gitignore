@@ -40,5 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Sesión de X (Playwright)
+# Sesión de X (Playwright) y cola de resúmenes
 .x-browser-profile/
+.digest-queue.json
+

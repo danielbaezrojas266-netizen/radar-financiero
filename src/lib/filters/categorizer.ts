@@ -70,15 +70,7 @@ export function categorizeItem(
 
   const categoryMatches = detectCategories(text, item.source.categories);
 
-  // Fuentes institucionales (Fed, BLS, SEC): todo su contenido es relevante
-  if (item.source.credibility >= 9) {
-    for (const cat of item.source.categories) {
-      if (!categoryMatches.some((m) => m.category === cat)) {
-        categoryMatches.push({ category: cat, keywords: ["institutional"] });
-      }
-    }
-  }
-
+  // Fuentes institucionales: solo pasan si hay keywords reales (sin auto-aceptar todo)
   if (categoryMatches.length === 0) {
     const allMatches: { category: AlertCategory; keywords: string[] }[] = [];
     for (const cat of Object.keys(CATEGORY_KEYWORDS) as AlertCategory[]) {
@@ -116,6 +108,7 @@ export function categorizeItem(
 
     return {
       id,
+      sourceId: item.source.id,
       category,
       priority,
       title: item.title.trim(),

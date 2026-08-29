@@ -11,6 +11,7 @@ export type AlertSource = "rss" | "twitter" | "blockchain" | "macro_calendar";
 
 export interface Alert {
   id: string;
+  sourceId: string;
   category: AlertCategory;
   priority: AlertPriority;
   title: string;
@@ -21,6 +22,7 @@ export interface Alert {
   publishedAt: string;
   assets: ("XAU" | "BTC")[];
   keywords: string[];
+  deliveryTier?: "instant" | "digest" | "dropped";
 }
 
 export interface PriceSnapshot {
