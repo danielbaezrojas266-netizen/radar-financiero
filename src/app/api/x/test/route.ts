@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { testXConnection, isXConfigured, fetchXAlerts } from "@/lib/fetchers/x-api";
+import { testXConnection, isXConfigured, isXCreditsDepleted, fetchXAlerts } from "@/lib/fetchers/x-api";
 import { X_ACCOUNTS } from "@/lib/config/x-accounts";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,8 @@ export async function GET() {
 
   return NextResponse.json({
     configured: true,
+    creditsDepleted: isXCreditsDepleted(),
+    fallback: isXCreditsDepleted() ? "nitter" : null,
     connection: test,
     activeAccounts,
     failedAccounts,

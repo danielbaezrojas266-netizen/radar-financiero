@@ -4,12 +4,26 @@ import type { Alert, FeedSource } from "@/lib/types";
 
 const userIdCache = new Map<string, string>();
 
+let creditsDepleted = false;
+
 function getBearerToken(): string | undefined {
   return process.env.X_BEARER_TOKEN || process.env.TWITTER_BEARER_TOKEN;
 }
 
 export function isXConfigured(): boolean {
   return Boolean(getBearerToken());
+}
+
+export function isXApiOperational(): boolean {
+  return isXConfigured() && !creditsDepleted;
+}
+
+export function isXCreditsDepleted(): boolean {
+  return creditsDepleted;
+}
+
+function markCreditsDepleted(status: number): void {
+  if (status === 402) creditsDepleted = true;
 }
 
 async function xFetch(path: string): Promise<Response> {
@@ -34,6 +48,7 @@ async function getUserId(username: string): Promise<string | null> {
   );
 
   if (!res.ok) {
+    markCreditsDepleted(res.status);
     console.error(`[X API] Error user @${username}:`, res.status, await res.text());
     return null;
   }
@@ -74,6 +89,7 @@ async function fetchAccountTweets(
   );
 
   if (!res.ok) {
+    markCreditsDepleted(res.status);
     console.error(
       `[X API] Error tweets @${account.username}:`,
       res.status,
@@ -156,8 +172,13 @@ export async function testXConnection(): Promise<{
   try {
     const res = await xFetch("/users/by/username/federalreserve?user.fields=username,name");
     if (!res.ok) {
+      markCreditsDepleted(res.status);
       const body = await res.text();
-      return { ok: false, error: `API respondió ${res.status}: ${body.slice(0, 200)}` };
+      const creditsMsg =
+        res.status === 402
+          ? "Créditos de la API agotados — activa un plan en developer.x.com o usa fallback Nitter"
+          : `API respondió ${res.status}: ${body.slice(0, 200)}`;
+      return { ok: false, error: creditsMsg };
     }
     const data = (await res.json()) as {
       data?: { username: string; name: string };

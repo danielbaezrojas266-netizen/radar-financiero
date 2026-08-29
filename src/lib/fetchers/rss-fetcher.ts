@@ -1,7 +1,7 @@
 import Parser from "rss-parser";
 import { categorizeItem } from "@/lib/filters/categorizer";
 import { FEED_SOURCES } from "@/lib/config/sources";
-import { isXConfigured } from "@/lib/fetchers/x-api";
+import { isXApiOperational } from "@/lib/fetchers/x-api";
 import type { Alert, FeedSource } from "@/lib/types";
 
 const parser = new Parser({
@@ -73,8 +73,8 @@ export async function fetchAllRssAlerts(): Promise<{
 }> {
   const enabled = FEED_SOURCES.filter((s) => {
     if (!s.enabled) return false;
-    // Si X API está activa, omitir Nitter (fallback inestable)
-    if (isXConfigured() && s.type === "twitter_rss") return false;
+    // Si X API funciona, omitir Nitter; si créditos agotados, usar Nitter como fallback
+    if (isXApiOperational() && s.type === "twitter_rss") return false;
     return true;
   });
   const results = await Promise.allSettled(
