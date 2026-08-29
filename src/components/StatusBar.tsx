@@ -2,15 +2,21 @@
 
 import { cn } from "@/lib/utils/cn";
 import type { MonitorStatus } from "@/lib/types";
-import { Activity, Radio, ShieldCheck } from "lucide-react";
+import { Activity, MessageCircle, Radio, ShieldCheck } from "lucide-react";
 
 interface StatusBarProps {
   status: MonitorStatus | null;
   connected: boolean;
   newCount: number;
+  telegramConfigured?: boolean;
 }
 
-export function StatusBar({ status, connected, newCount }: StatusBarProps) {
+export function StatusBar({
+  status,
+  connected,
+  newCount,
+  telegramConfigured,
+}: StatusBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3">
       <div className="flex items-center gap-2">
@@ -39,6 +45,16 @@ export function StatusBar({ status, connected, newCount }: StatusBarProps) {
       <div className="flex items-center gap-1.5 text-sm text-zinc-500">
         <Activity className="h-3.5 w-3.5" />
         {status?.alertsToday ?? 0} alertas hoy
+      </div>
+
+      <div className="flex items-center gap-1.5 text-sm text-zinc-500">
+        <MessageCircle className="h-3.5 w-3.5" />
+        Telegram{" "}
+        {telegramConfigured ? (
+          <span className="text-emerald-500">conectado</span>
+        ) : (
+          <span className="text-amber-500">sin configurar</span>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5 text-sm text-zinc-500">

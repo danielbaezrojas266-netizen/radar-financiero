@@ -1,0 +1,97 @@
+import type { Alert, AlertCategory } from "@/lib/types";
+
+const CATEGORY_EMOJI: Record<AlertCategory, string> = {
+  fed: "🏛️",
+  macro: "📊",
+  geopolitics: "🌍",
+  btc_whale: "🐋",
+  btc_regulation: "⚖️",
+};
+
+const PRIORITY_LABEL = {
+  critical: "🔴 CRÍTICO",
+  high: "🟠 ALTO",
+  medium: "🟡 MEDIO",
+};
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+export function isTelegramConfigured(): boolean {
+  return Boolean(
+    process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID
+  );
+}
+
+export function formatAlertMessage(alert: Alert): string {
+  const emoji = CATEGORY_EMOJI[alert.category];
+  const priority = PRIORITY_LABEL[alert.priority];
+  const assets = alert.assets.join(" · ");
+  const link = alert.url
+    ? `\n<a href="${escapeHtml(alert.url)}">Ver fuente →</a>`
+    : "";
+
+  return [
+    `<b>${emoji} ${priority}</b>`,
+    `<b>${escapeHtml(alert.title)}</b>`,
+    alert.summary ? escapeHtml(alert.summary.slice(0, 300)) : "",
+    `\n📌 ${escapeHtml(alert.sourceName)} · ${assets}`,
+    link,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export async function sendTelegramMessage(text: string): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    console.warn("[Telegram] TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID no configurados");
+    return false;
+  }
+
+  try {
+    const res = await fetch(
+      `https://api.telegram.org/bot${token}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text,
+          parse_mode: "HTML",
+          disable_web_page_preview: false,
+        }),
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[Telegram] Error API:", err);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("[Telegram] Fetch error:", error);
+    return false;
+  }
+}
+
+export async function sendAlertsToTelegram(alerts: Alert[]): Promise<number> {
+  if (!isTelegramConfigured() || alerts.length === 0) return 0;
+
+  let sent = 0;
+  for (const alert of alerts) {
+    const ok = await sendTelegramMessage(formatAlertMessage(alert));
+    if (ok) sent++;
+    // Evitar rate limit de Telegram (~30 msg/s, ser conservadores)
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return sent;
+}

@@ -48,18 +48,33 @@ Para monitoreo persistente, despliega en Vercel, Railway o un VPS. El endpoint S
 - **Blockchair**: límite de rate en tier gratuito.
 - **No ejecuta trades** — solo alertas informativas.
 
-## Variables de entorno (opcional)
+## Alertas por Telegram
 
-No requiere API keys para funcionar. Opcionalmente puedes añadir:
+1. Crea un bot con [@BotFather](https://t.me/BotFather) en Telegram → copia el **token**
+2. Envía `/start` a tu bot
+3. Obtén tu **chat_id** visitando `https://api.telegram.org/bot<TOKEN>/getUpdates`
+4. Configura las variables de entorno:
 
 ```env
-# Futuro: API oficial de X
-TWITTER_BEARER_TOKEN=
+TELEGRAM_BOT_TOKEN=tu_token_aqui
+TELEGRAM_CHAT_ID=tu_chat_id_aqui
+```
 
-# Futuro: alertas por Telegram/Discord
+5. Reinicia el servidor. Al arrancar recibirás un mensaje de confirmación.
+6. Prueba la conexión: `curl -X POST http://localhost:4317/api/telegram/test`
+
+Las alertas nuevas se envían automáticamente cada 45 segundos (prioridad CRÍTICO, ALTO y MEDIO).
+
+## Variables de entorno (opcional)
+
+No requiere API keys para el radar base. Para Telegram:
+
+```env
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
 ```
+
+Opcional — futuro API oficial de X:
 
 ## Licencia
 

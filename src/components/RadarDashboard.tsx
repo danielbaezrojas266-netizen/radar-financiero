@@ -20,6 +20,7 @@ export function RadarDashboard() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<AlertCategory | "all">("all");
   const [newAlertIds, setNewAlertIds] = useState<Set<string>>(new Set());
+  const [telegramConfigured, setTelegramConfigured] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const playAlertSound = useCallback(() => {
@@ -49,6 +50,13 @@ export function RadarDashboard() {
     }
     return c;
   }, [alerts]);
+
+  useEffect(() => {
+    fetch("/api/telegram/test")
+      .then((r) => r.json())
+      .then((d) => setTelegramConfigured(d.configured === true))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let eventSource: EventSource | null = null;
@@ -116,6 +124,7 @@ export function RadarDashboard() {
         status={status}
         connected={connected}
         newCount={newAlertIds.size}
+        telegramConfigured={telegramConfigured}
       />
       <PriceTicker prices={prices} />
       <CategoryFilter
