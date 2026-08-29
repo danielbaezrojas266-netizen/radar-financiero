@@ -1,0 +1,10 @@
+# Ignore local digest queue and browser profile in Docker context
+.x-browser-profile
+.digest-queue.json
+.git
+.next
+node_modules
+*.md
+!README.md
+.env*
+!.env.example

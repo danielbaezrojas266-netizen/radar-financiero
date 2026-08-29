@@ -13,6 +13,13 @@ export function isXBrowserMode(): boolean {
   return process.env.X_USE_API !== "true";
 }
 
+export function isXBrowserDisabled(): boolean {
+  return (
+    process.env.X_BROWSER_DISABLED === "true" ||
+    process.env.X_BROWSER_DISABLED === "1"
+  );
+}
+
 export function getXBrowserStatus() {
   return {
     mode: "browser",
@@ -80,6 +87,15 @@ export async function checkXBrowserSession(): Promise<{
   loggedIn: boolean;
   error?: string;
 }> {
+  if (isXBrowserDisabled()) {
+    sessionLoggedIn = false;
+    return {
+      ok: true,
+      loggedIn: false,
+      error: "Navegador X desactivado (modo RSS/Nitter)",
+    };
+  }
+
   let context: BrowserContext | null = null;
   try {
     context = await getContext(true);
@@ -157,6 +173,15 @@ export async function fetchXBrowserAlerts(): Promise<{
   failedAccounts: string[];
   loggedIn: boolean;
 }> {
+  if (isXBrowserDisabled()) {
+    return {
+      alerts: [],
+      activeAccounts: [],
+      failedAccounts: [],
+      loggedIn: false,
+    };
+  }
+
   const alerts: Alert[] = [];
   const activeAccounts: string[] = [];
   const failedAccounts: string[] = [];

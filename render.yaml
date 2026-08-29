@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: radar-financiero
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_TIMEZONE
+        value: Etc/GMT+6
+      - key: X_BROWSER_DISABLED
+        value: "true"
+      - key: CRON_SECRET
+        sync: false
+      - key: NODE_ENV
+        value: production

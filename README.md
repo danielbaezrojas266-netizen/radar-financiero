@@ -39,7 +39,14 @@ Abre [http://localhost:4317](http://localhost:4317).
 
 ## Despliegue 24/7
 
-Para monitoreo persistente, despliega en Vercel, Railway o un VPS. El endpoint SSE mantiene el escaneo activo mientras haya al menos un cliente conectado. Para 24/7 sin depender del navegador, añade un cron job que llame a `/api/alerts` cada minuto.
+Guía completa: **[DEPLOY.md](./DEPLOY.md)**
+
+Resumen rápido (Railway):
+1. Conecta el repo a [railway.app](https://railway.app)
+2. Variables: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_TIMEZONE=Etc/GMT+6`, `X_BROWSER_DISABLED=true`, `CRON_SECRET`
+3. Deploy → prueba `/api/health`
+
+Resúmenes: **7:00** y **16:30** (UTC-6). Cat. 1 al instante.
 
 ## Limitaciones
 
