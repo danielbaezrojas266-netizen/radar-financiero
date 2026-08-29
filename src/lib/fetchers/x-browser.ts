@@ -35,6 +35,36 @@ function accountToFeedSource(account: (typeof X_ACCOUNTS)[0]): FeedSource {
   };
 }
 
+async function detectLoggedIn(
+  page: Awaited<ReturnType<BrowserContext["newPage"]>>
+): Promise<boolean> {
+  const url = page.url();
+  if (url.includes("/login") || url.includes("/i/flow/login")) return false;
+
+  const bodyText = await page.innerText("body").catch(() => "");
+  const loginMarkers = [
+    "Happening now",
+    "Email or username",
+    "Correo electrónico o nombre de usuario",
+    "Continue with Google",
+    "Continuar con Google",
+    "Inicia sesión",
+    "Sign in",
+  ];
+  if (loginMarkers.some((m) => bodyText.includes(m))) return false;
+
+  const hasUsernameInput =
+    (await page.locator('input[autocomplete="username"]').count()) > 0;
+  if (hasUsernameInput) return false;
+
+  // Timeline o perfil cargado
+  const hasTweets =
+    (await page.locator('article[data-testid="tweet"]').count()) > 0;
+  const onHome = url.includes("/home") || url === "https://x.com/home";
+
+  return hasTweets || onHome;
+}
+
 async function getContext(headless = true): Promise<BrowserContext> {
   return chromium.launchPersistentContext(X_PROFILE_DIR, {
     headless,
@@ -61,13 +91,9 @@ export async function checkXBrowserSession(): Promise<{
     await page.waitForTimeout(2000);
 
     const url = page.url();
-    const loginWall =
-      url.includes("/login") ||
-      url.includes("/i/flow/login") ||
-      (await page.locator('input[autocomplete="username"]').count()) > 0;
+    sessionLoggedIn = await detectLoggedIn(page);
 
-    sessionLoggedIn = !loginWall;
-    return { ok: true, loggedIn: !loginWall };
+    return { ok: true, loggedIn: sessionLoggedIn };
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Error de sesión";
     lastScrapeError = msg;
@@ -92,6 +118,14 @@ async function scrapeProfile(
     timeout: 30000,
   });
   await page.waitForTimeout(2500);
+
+  // Esperar tweets o detectar muro de login
+  try {
+    await page.waitForSelector('article[data-testid="tweet"]', { timeout: 12000 });
+  } catch {
+    const body = await page.innerText("body").catch(() => "");
+    if (body.includes("Sign in") || body.includes("Inicia sesión")) return [];
+  }
 
   // Scroll leve para cargar tweets
   await page.evaluate(() => window.scrollBy(0, 600));
@@ -140,15 +174,9 @@ export async function fetchXBrowserAlerts(): Promise<{
     });
     await page.waitForTimeout(2000);
 
-    const url = page.url();
-    const loginWall =
-      url.includes("/login") ||
-      url.includes("/i/flow/login") ||
-      (await page.locator('input[autocomplete="username"]').count()) > 0;
+    sessionLoggedIn = await detectLoggedIn(page);
 
-    sessionLoggedIn = !loginWall;
-
-    if (loginWall) {
+    if (!sessionLoggedIn) {
       lastScrapeError = "Sesión de X no iniciada — ejecuta npm run x:login";
       return {
         alerts: [],
