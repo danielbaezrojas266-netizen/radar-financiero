@@ -1,4 +1,4 @@
-# Market Radar — XAU/USD & BTC
+# Radar Financiero — XAU/USD & BTC
 
 Radar de noticias en tiempo real para **Oro (XAU/USD)** y **Bitcoin (BTC)**. Filtra ruido, memes y opiniones emocionales; solo alerta ante eventos que mueven mercados.
 

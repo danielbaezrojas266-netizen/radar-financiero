@@ -12,7 +12,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-zinc-100">
-                Market Radar
+                Radar Financiero
               </h1>
               <p className="text-xs text-zinc-500">
                 XAU/USD · BTC — Solo señales, sin ruido

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Market Radar — XAU/USD & BTC",
+  title: "Radar Financiero — XAU/USD & BTC",
   description:
     "Radar de noticias en tiempo real para Oro (XAU/USD) y Bitcoin. Monitoreo Fed, macro, geopolítica y ballenas.",
 };
