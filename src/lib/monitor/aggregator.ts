@@ -1,6 +1,7 @@
 import { fetchWhaleAlerts } from "@/lib/fetchers/btc-whales";
 import { fetchPrices } from "@/lib/fetchers/prices";
 import { fetchAllRssAlerts } from "@/lib/fetchers/rss-fetcher";
+import { fetchXAlerts, isXConfigured } from "@/lib/fetchers/x-api";
 import { FEED_SOURCES } from "@/lib/config/sources";
 import type { Alert, MonitorStatus, PriceSnapshot } from "@/lib/types";
 
@@ -43,9 +44,10 @@ export interface ScanResult {
 }
 
 export async function runScan(): Promise<ScanResult> {
-  const [rssResult, prices] = await Promise.all([
+  const [rssResult, prices, xResult] = await Promise.all([
     fetchAllRssAlerts(),
     fetchPrices(),
+    fetchXAlerts(),
   ]);
 
   const btcPrice =
@@ -53,7 +55,7 @@ export async function runScan(): Promise<ScanResult> {
   const whaleAlerts = await fetchWhaleAlerts(btcPrice);
 
   const allAlerts = dedupeAlerts(
-    sortAlerts([...rssResult.alerts, ...whaleAlerts])
+    sortAlerts([...rssResult.alerts, ...xResult.alerts, ...whaleAlerts])
   );
 
   const newAlerts = allAlerts.filter((a) => !seenIds.has(a.id));
@@ -75,14 +77,22 @@ export async function runScan(): Promise<ScanResult> {
     (a) => new Date(a.publishedAt) >= todayStart
   ).length;
 
+  const xSourceCount = isXConfigured() ? xResult.activeAccounts.length : 0;
+  const rssActive = rssResult.activeSources.filter(
+    (id) => !id.includes("-twitter") || !isXConfigured()
+  ).length;
+
   return {
     alerts: allAlerts,
     newAlerts,
     prices,
     status: {
       lastScan: lastScanTime,
-      sourcesActive: rssResult.activeSources.length,
-      sourcesTotal: FEED_SOURCES.filter((s) => s.enabled).length,
+      sourcesActive: rssActive + xSourceCount,
+      sourcesTotal:
+        FEED_SOURCES.filter(
+          (s) => s.enabled && (!s.id.includes("-twitter") || !isXConfigured())
+        ).length + (isXConfigured() ? xResult.activeAccounts.length : 0),
       alertsToday,
       isScanning: false,
     },

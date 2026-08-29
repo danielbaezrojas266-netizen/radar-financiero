@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { RadarDashboard } from "@/components/RadarDashboard";
-import { Radar } from "lucide-react";
+import { Radar, Settings } from "lucide-react";
 
 export default function Home() {
   return (
@@ -19,13 +20,22 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="hidden text-right sm:block">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-600">
-              Modo
-            </p>
-            <p className="text-sm font-semibold text-emerald-400">
-              Observación · No ejecuta trades
-            </p>
+          <div className="hidden items-center gap-4 sm:flex">
+            <Link
+              href="/configuracion"
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300"
+            >
+              <Settings className="h-4 w-4" />
+              Configurar X
+            </Link>
+            <div className="text-right">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-600">
+                Modo
+              </p>
+              <p className="text-sm font-semibold text-emerald-400">
+                Observación · No ejecuta trades
+              </p>
+            </div>
           </div>
         </div>
       </header>

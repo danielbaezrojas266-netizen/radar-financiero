@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { runScan } from "@/lib/monitor/aggregator";
 import {
+  formatAlertMessage,
   isTelegramConfigured,
   sendTelegramMessage,
 } from "@/lib/notifiers/telegram";
@@ -21,6 +23,16 @@ export async function POST() {
   const ok = await sendTelegramMessage(
     "🧪 <b>Prueba — Radar Financiero</b>\nConexión con Telegram correcta. Recibirás alertas en español en tiempo real."
   );
+
+  if (ok) {
+    const { alerts } = await runScan();
+    const sample = alerts[0];
+    if (sample) {
+      await sendTelegramMessage(
+        `📡 <b>Ejemplo de alerta en español:</b>\n\n${await formatAlertMessage(sample)}`
+      );
+    }
+  }
 
   return NextResponse.json({ ok, message: ok ? "Mensaje enviado" : "Error al enviar" });
 }

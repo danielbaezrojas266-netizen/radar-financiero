@@ -33,7 +33,7 @@ Abre [http://localhost:4317](http://localhost:4317).
 - **Next.js 16** — dashboard + API
 - **SSE** (`/api/stream`) — escaneo cada 45 segundos, push en tiempo real
 - **RSS** — Fed, BLS, BEA, Reuters, SEC, CFTC, CoinDesk
-- **X (Twitter)** — vía RSS de cuentas oficiales (@federalreserve, @ecb, @whale_alert)
+- **X (Twitter)** — API v2 oficial (Bearer Token) o fallback Nitter
 - **On-chain** — Blockchair API para transacciones >500 BTC
 - **Precios** — CoinGecko (XAU proxy via XAUT, BTC spot)
 
@@ -43,7 +43,7 @@ Para monitoreo persistente, despliega en Vercel, Railway o un VPS. El endpoint S
 
 ## Limitaciones
 
-- **X/Twitter**: usa instancias RSS (Nitter); pueden fallar ocasionalmente. Para producción, integra la API oficial de X.
+- **X/Twitter**: con `X_BEARER_TOKEN` usa la API oficial; sin token, intenta Nitter (inestable).
 - **Reuters RSS**: a veces bloquea requests; el radar continúa con otras fuentes.
 - **Blockchair**: límite de rate en tier gratuito.
 - **No ejecuta trades** — solo alertas informativas.
@@ -65,16 +65,25 @@ TELEGRAM_CHAT_ID=tu_chat_id_aqui
 
 Las alertas nuevas se envían automáticamente cada 45 segundos (prioridad CRÍTICO, ALTO y MEDIO).
 
-## Variables de entorno (opcional)
+## Configuración de X (Twitter API)
 
-No requiere API keys para el radar base. Para Telegram:
+Guía paso a paso: [http://localhost:4317/configuracion](http://localhost:4317/configuracion)
+
+1. Entra en [developer.x.com](https://developer.x.com/en/portal/dashboard)
+2. Crea un **Project** y una **App**
+3. Genera el **Bearer Token** en Keys and tokens
+4. Configura `X_BEARER_TOKEN` y reinicia
+5. Prueba: `curl http://localhost:4317/api/x/test`
+
+Cuentas: @federalreserve, @JeromeHPowell, @ecb, @FirstSquawk, @whale_alert, @SEC_News
+
+## Variables de entorno
 
 ```env
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
+X_BEARER_TOKEN=
 ```
-
-Opcional — futuro API oficial de X:
 
 ## Licencia
 
