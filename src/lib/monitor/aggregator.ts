@@ -1,7 +1,7 @@
 import { fetchWhaleAlerts } from "@/lib/fetchers/btc-whales";
 import { fetchPrices } from "@/lib/fetchers/prices";
 import { fetchAllRssAlerts } from "@/lib/fetchers/rss-fetcher";
-import { fetchXAlerts, isXConfigured, isXCreditsDepleted } from "@/lib/fetchers/x-api";
+import { fetchXBrowserAlerts } from "@/lib/fetchers/x-browser";
 import { FEED_SOURCES } from "@/lib/config/sources";
 import type { Alert, MonitorStatus, PriceSnapshot } from "@/lib/types";
 
@@ -44,11 +44,12 @@ export interface ScanResult {
 }
 
 export async function runScan(): Promise<ScanResult> {
-  const [rssResult, prices, xResult] = await Promise.all([
+  const [rssResult, prices] = await Promise.all([
     fetchAllRssAlerts(),
     fetchPrices(),
-    fetchXAlerts(),
   ]);
+
+  const xResult = await fetchXBrowserAlerts();
 
   const btcPrice =
     prices.find((p) => p.symbol === "BTC/USD")?.price ?? 95000;
@@ -77,11 +78,7 @@ export async function runScan(): Promise<ScanResult> {
     (a) => new Date(a.publishedAt) >= todayStart
   ).length;
 
-  const xSourceCount = isXConfigured() && !isXCreditsDepleted() ? xResult.activeAccounts.length : 0;
-  const useNitter = !isXConfigured() || isXCreditsDepleted();
-  const rssActive = rssResult.activeSources.filter(
-    (id) => !id.includes("-twitter") || useNitter
-  ).length;
+  const xSourceCount = xResult.loggedIn ? xResult.activeAccounts.length : 0;
 
   return {
     alerts: allAlerts,
@@ -89,11 +86,10 @@ export async function runScan(): Promise<ScanResult> {
     prices,
     status: {
       lastScan: lastScanTime,
-      sourcesActive: rssActive + xSourceCount,
+      sourcesActive: rssResult.activeSources.length + xSourceCount,
       sourcesTotal:
-        FEED_SOURCES.filter(
-          (s) => s.enabled && (!s.id.includes("-twitter") || useNitter)
-        ).length + xSourceCount,
+        FEED_SOURCES.filter((s) => s.enabled && s.type !== "twitter_rss")
+          .length + (xResult.loggedIn ? xResult.activeAccounts.length : 0),
       alertsToday,
       isScanning: false,
     },
