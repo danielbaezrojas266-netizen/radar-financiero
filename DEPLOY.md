@@ -12,6 +12,8 @@ TELEGRAM_TIMEZONE=Etc/GMT+6
 X_BROWSER_DISABLED=true
 X_API_DISABLED=true
 CRON_SECRET=elige_un_secreto_largo
+NEXT_PUBLIC_APP_URL=https://radar-financiero-production.up.railway.app
+ALERTS_LOCALE=es
 ```
 
 ## Opción A — Railway (recomendado, ~5 min)
