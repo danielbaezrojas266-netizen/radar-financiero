@@ -1,4 +1,4 @@
-import type { Alert, AlertCategory, AlertPriority } from "@/lib/types";
+import type { Alert, AlertCategory } from "@/lib/types";
 import { translateAlertText } from "@/lib/notifiers/translate";
 import { verificationLabel } from "@/lib/filters/cross-verify";
 import {
@@ -7,14 +7,7 @@ import {
 import type { AlertWithTier } from "@/lib/filters/delivery-rules";
 import type { MacroContextSnapshot } from "@/lib/types";
 import { formatMacroForTelegram } from "@/lib/fetchers/macro-context";
-
-const CATEGORY_LABELS_ES: Record<AlertCategory, string> = {
-  fed: "Fed / Tasas de interés",
-  macro: "Macro (CPI/PPI/Empleo/DXY)",
-  geopolitics: "Geopolítica / Oro",
-  btc_whale: "Flujo institucional / On-chain BTC",
-  btc_regulation: "Regulación BTC",
-};
+import { formatDiscountForTelegram } from "@/lib/filters/discount-context";
 
 const CATEGORY_EMOJI: Record<AlertCategory, string> = {
   fed: "🏛️",
@@ -75,6 +68,11 @@ export async function formatTraderAlertMessage(
     lines.push(
       `<b>Reacción observada:</b> ${escapeHtml(alert.priceReactionNote)}`
     );
+  }
+
+  if (alert.discountContext) {
+    lines.push("");
+    lines.push(formatDiscountForTelegram(alert.discountContext));
   }
 
   if (alert.assets.includes("XAU") && ctx) {

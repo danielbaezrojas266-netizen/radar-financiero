@@ -1,5 +1,6 @@
 import type { AlertWithTier } from "@/lib/filters/delivery-rules";
 import { verificationLabel } from "@/lib/filters/cross-verify";
+import { formatDiscountForTelegram } from "@/lib/filters/discount-context";
 import { formatMacroForTelegram } from "@/lib/fetchers/macro-context";
 import type { MacroContextSnapshot } from "@/lib/types";
 import { translateAlertText } from "@/lib/notifiers/translate";
@@ -55,6 +56,11 @@ export async function formatBatch15mReport(
       );
       lines.push(`· ${escapeHtml(title.slice(0, 110))}`);
       lines.push(`  <i>${escapeHtml(ver)}</i>`);
+      if (item.discountContext) {
+        lines.push(
+          `  ${formatDiscountForTelegram(item.discountContext).replace(/\n/g, "\n  ")}`
+        );
+      }
     }
     lines.push("");
   }

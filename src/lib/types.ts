@@ -57,6 +57,20 @@ export interface Alert {
   priceReactionNote?: string;
   /** Consenso vs dato real cuando aplique */
   consensusNote?: string;
+  /** Contexto de descuento para macro XAU (dato ant., consenso, mov. 5d) */
+  discountContext?: DiscountContext;
+}
+
+export interface DiscountContext {
+  indicator: string;
+  actual?: number;
+  consensus?: number;
+  previous?: number;
+  unit: "pct_mom" | "pct_yoy" | "k_jobs";
+  surprise: "above_consensus" | "below_consensus" | "inline" | "unknown";
+  xauChange5d: number | null;
+  dxyChange5d: number | null;
+  interpretation: string;
 }
 
 export interface PriceSnapshot {

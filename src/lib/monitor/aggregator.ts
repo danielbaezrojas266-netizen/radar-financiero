@@ -12,6 +12,7 @@ import {
 } from "@/lib/fetchers/x-api";
 import {
   applyDeliveryRules,
+  enrichWithDiscountContext,
   type AlertWithTier,
 } from "@/lib/filters/delivery-rules";
 import {
@@ -118,8 +119,9 @@ export async function runScan(): Promise<ScanResult> {
   );
 
   const filtered = applyDeliveryRules(rawAlerts, macroContext);
+  const enriched = await enrichWithDiscountContext(filtered);
 
-  const allAlerts: AlertWithTier[] = filtered;
+  const allAlerts: AlertWithTier[] = enriched;
   const newAlerts = allAlerts.filter((a) => !seenIds.has(a.id));
 
   const instantCandidates = filterAlreadyAlerted(

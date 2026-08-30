@@ -11,6 +11,7 @@ import {
   canBeCriticalInstant,
   detectConsensusNote,
 } from "@/lib/filters/cross-verify";
+import { buildDiscountContext } from "@/lib/filters/discount-context";
 import type { Alert, DeliveryTier, MacroContextSnapshot } from "@/lib/types";
 
 export type AlertWithTier = Alert & { deliveryTier: DeliveryTier };
@@ -92,6 +93,19 @@ export function applyDeliveryRules(
       };
     })
     .filter((a) => a.deliveryTier !== "dropped");
+}
+
+export async function enrichWithDiscountContext(
+  alerts: AlertWithTier[]
+): Promise<AlertWithTier[]> {
+  return Promise.all(
+    alerts.map(async (alert) => {
+      if (alert.discountContext) return alert;
+      const discountContext = await buildDiscountContext(alert);
+      if (!discountContext) return alert;
+      return { ...alert, discountContext };
+    })
+  );
 }
 
 function buildPriceReactionNote(
