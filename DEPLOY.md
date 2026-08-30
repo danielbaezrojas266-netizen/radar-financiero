@@ -10,6 +10,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 TELEGRAM_CHAT_ID=tu_chat_id
 TELEGRAM_TIMEZONE=Etc/GMT+6
 X_BROWSER_DISABLED=true
+X_API_DISABLED=true
 CRON_SECRET=elige_un_secreto_largo
 ```
 

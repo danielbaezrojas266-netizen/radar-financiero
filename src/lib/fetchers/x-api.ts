@@ -15,6 +15,7 @@ export function isXConfigured(): boolean {
 }
 
 export function isXApiOperational(): boolean {
+  if (process.env.X_API_DISABLED === "true") return false;
   return isXConfigured() && !creditsDepleted;
 }
 
