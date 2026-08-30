@@ -52,8 +52,11 @@ curl -X POST https://TU-URL/api/telegram/test
 curl "https://TU-URL/api/cron?secret=TU_CRON_SECRET"
 ```
 
-## Nota sobre X
+## X 24/7 sin login
 
-En producción usamos **RSS + Nitter** (sin login de X). Cuando puedas
-iniciar sesión desde un dispositivo habitual, puedes reactivar Playwright
-con `X_BROWSER_DISABLED=false` en un VPS con Chromium.
+En producción el radar lee X vía **Nitter multi-instancia** (4 mirrors).
+No requiere sesión ni API de pago. Cuentas: @federalreserve, @Reuters,
+@business, @FXStreet, @whale_alert, @SEC_News, @ecb.
+
+Si quieres scraping con navegador (VPS con Desktop), pon
+`X_BROWSER_DISABLED=false` y ejecuta `npm run x:login` una vez.

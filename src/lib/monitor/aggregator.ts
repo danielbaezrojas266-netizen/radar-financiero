@@ -52,9 +52,10 @@ export async function runScan(): Promise<ScanResult> {
     fetchPrices(),
   ]);
 
-  const xResult = rssResult.xFallbackMode
-    ? { alerts: [], activeAccounts: [], failedAccounts: [], loggedIn: false }
-    : await fetchXBrowserAlerts();
+  const xResult =
+    rssResult.xMode === "browser"
+      ? await fetchXBrowserAlerts()
+      : { alerts: [], activeAccounts: [], failedAccounts: [], loggedIn: false };
 
   const btcPrice =
     prices.find((p) => p.symbol === "BTC/USD")?.price ?? 95000;
@@ -91,7 +92,7 @@ export async function runScan(): Promise<ScanResult> {
 
   const xSourceCount = xResult.loggedIn
     ? xResult.activeAccounts.length
-    : rssResult.xFallbackMode
+    : rssResult.xMode !== "browser"
       ? rssResult.activeSources.filter((id) => id.startsWith("nitter-")).length
       : 0;
 
@@ -112,7 +113,7 @@ export async function runScan(): Promise<ScanResult> {
       lastScan: lastScanTime,
       sourcesActive: rssResult.activeSources.length + xSourceCount,
       sourcesTotal:
-        rssOnlyCount + (rssResult.xFallbackMode ? nitterCount : xResult.loggedIn ? xResult.activeAccounts.length : 0),
+        rssOnlyCount + (rssResult.xMode !== "browser" ? nitterCount : xResult.loggedIn ? xResult.activeAccounts.length : 0),
       alertsToday,
       isScanning: false,
     },
