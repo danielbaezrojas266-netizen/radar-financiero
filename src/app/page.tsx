@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { RadarDashboard } from "@/components/RadarDashboard";
-import { Radar, Settings } from "lucide-react";
+import { Radar, Settings, Smartphone } from "lucide-react";
 
 export default function Home() {
   return (
@@ -20,15 +20,23 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <div className="hidden items-center gap-4 sm:flex">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link
+              href="/acceso"
+              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300"
+              title="Acceso PC y celular"
+            >
+              <Smartphone className="h-4 w-4" />
+              <span className="hidden sm:inline">Acceso móvil</span>
+            </Link>
             <Link
               href="/configuracion"
-              className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300"
+              className="hidden items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 sm:flex"
             >
               <Settings className="h-4 w-4" />
               Configurar X
             </Link>
-            <div className="text-right">
+            <div className="hidden text-right sm:block">
               <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-600">
                 Modo
               </p>

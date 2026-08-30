@@ -4,6 +4,7 @@ import { fetchAllRssAlerts } from "@/lib/fetchers/rss-fetcher";
 import { fetchXBrowserAlerts } from "@/lib/fetchers/x-browser";
 import { fetchXAlerts, isXApiOperational, isXConfigured } from "@/lib/fetchers/x-api";
 import { applyDeliveryRules, type AlertWithTier } from "@/lib/filters/delivery-rules";
+import { localizeAlerts } from "@/lib/notifiers/translate-alerts";
 import { FEED_SOURCES } from "@/lib/config/sources";
 import type { Alert, MonitorStatus, PriceSnapshot } from "@/lib/types";
 
@@ -112,11 +113,17 @@ export async function runScan(): Promise<ScanResult> {
     (s) => s.enabled && s.type === "twitter_rss"
   ).length;
 
+  const localizedAlerts = await localizeAlerts(allAlerts);
+
   return {
-    alerts: allAlerts,
-    newAlerts,
-    instantAlerts,
-    digestAlerts,
+    alerts: localizedAlerts,
+    newAlerts: localizedAlerts.filter((a) => newAlerts.some((n) => n.id === a.id)),
+    instantAlerts: localizedAlerts.filter((a) =>
+      instantAlerts.some((n) => n.id === a.id)
+    ),
+    digestAlerts: localizedAlerts.filter((a) =>
+      digestAlerts.some((n) => n.id === a.id)
+    ),
     prices,
     status: {
       lastScan: lastScanTime,

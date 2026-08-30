@@ -72,10 +72,13 @@ export function formatTime(iso: string): string {
 
 export function formatPrice(price: number): string {
   if (price >= 1000) {
-    return price.toLocaleString("en-US", {
+    return price.toLocaleString("es-ES", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
   }
-  return price.toFixed(2);
+  return price.toLocaleString("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }

@@ -1,0 +1,19 @@
+{
+  "name": "Radar Financiero",
+  "short_name": "Radar",
+  "description": "Alertas en tiempo real para Oro (XAU/USD) y Bitcoin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#10b981",
+  "lang": "es",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
