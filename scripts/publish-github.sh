@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OWNER="${GITHUB_OWNER:-daniel-baez-rojas}"
+OWNER="${GITHUB_OWNER:-danielbaezrojas266-netizen}"
 REPO="${GITHUB_REPO:-radar-financiero}"
 FULL="${OWNER}/${REPO}"
 
