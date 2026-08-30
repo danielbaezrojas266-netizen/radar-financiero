@@ -30,4 +30,4 @@ COPY --from=builder /app/next.config.ts ./next.config.ts
 
 USER nextjs
 EXPOSE 4317
-CMD ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "4317"]
+CMD ["npm", "run", "start"]
