@@ -7,7 +7,7 @@ apagues tu PC. Esta guía usa **Railway** (recomendado) o **Render**.
 
 ```
 TELEGRAM_BOT_TOKEN=tu_token
-TELEGRAM_CHAT_ID=tu_chat_id
+TELEGRAM_CHAT_ID=tu_chat_id_aqui
 TELEGRAM_TIMEZONE=Etc/GMT+6
 X_BROWSER_DISABLED=true
 X_API_DISABLED=true

@@ -81,8 +81,10 @@ export default function AccesoPage() {
             Las alertas críticas y los resúmenes diarios (7:00 AM y 4:30 PM
             UTC-6) llegan traducidas al español en{" "}
             <strong className="text-zinc-300">@radar_financiero_2026_bot</strong>.
-            No necesitas tener el navegador abierto: Telegram te avisa aunque la
-            app esté cerrada.
+            Puedes usar un <strong className="text-zinc-300">grupo de Telegram</strong>{" "}
+            (recomendado para 2+ personas): añade el bot como administrador y
+            configura <code className="text-emerald-400">TELEGRAM_CHAT_ID</code>{" "}
+            con el ID del grupo (número negativo).
           </p>
         </section>
 

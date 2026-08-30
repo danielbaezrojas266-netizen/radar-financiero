@@ -37,8 +37,17 @@ function escapeHtml(text: string): string {
 
 export function isTelegramConfigured(): boolean {
   return Boolean(
-    process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID
+    process.env.TELEGRAM_BOT_TOKEN && getTelegramChatIds().length > 0
   );
+}
+
+/** Un chat o varios separados por coma (usuario, grupo, supergrupo) */
+export function getTelegramChatIds(): string[] {
+  const raw = process.env.TELEGRAM_CHAT_ID ?? "";
+  return raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
 }
 
 export async function formatTraderAlertMessage(
@@ -101,39 +110,44 @@ export async function formatAlertMessage(alert: Alert): Promise<string> {
 
 export async function sendTelegramMessage(text: string): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const chatIds = getTelegramChatIds();
 
-  if (!token || !chatId) {
+  if (!token || chatIds.length === 0) {
     console.warn("[Telegram] TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID no configurados");
     return false;
   }
 
-  try {
-    const res = await fetch(
-      `https://api.telegram.org/bot${token}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-          parse_mode: "HTML",
-          disable_web_page_preview: false,
-        }),
+  let anyOk = false;
+
+  for (const chatId of chatIds) {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${token}/sendMessage`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text,
+            parse_mode: "HTML",
+            disable_web_page_preview: false,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error(`[Telegram] Error API chat ${chatId}:`, err);
+        continue;
       }
-    );
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("[Telegram] Error API:", err);
-      return false;
+      anyOk = true;
+    } catch (error) {
+      console.error(`[Telegram] Fetch error chat ${chatId}:`, error);
     }
-
-    return true;
-  } catch (error) {
-    console.error("[Telegram] Fetch error:", error);
-    return false;
   }
+
+  return anyOk;
 }
 
 export async function sendAlertsToTelegram(alerts: Alert[]): Promise<number> {

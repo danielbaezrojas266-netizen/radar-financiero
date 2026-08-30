@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runScan } from "@/lib/monitor/aggregator";
 import {
   formatAlertMessage,
+  getTelegramChatIds,
   isTelegramConfigured,
   sendTelegramMessage,
 } from "@/lib/notifiers/telegram";
@@ -38,9 +39,17 @@ export async function POST() {
 }
 
 export async function GET() {
+  const chatIds = getTelegramChatIds();
   return NextResponse.json({
     configured: isTelegramConfigured(),
     hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN),
-    hasChatId: Boolean(process.env.TELEGRAM_CHAT_ID),
+    hasChatId: chatIds.length > 0,
+    chatCount: chatIds.length,
+    chatHint:
+      chatIds.length === 1 && chatIds[0].startsWith("-")
+        ? "grupo"
+        : chatIds.length === 1
+          ? "chat privado"
+          : "múltiples destinos",
   });
 }
