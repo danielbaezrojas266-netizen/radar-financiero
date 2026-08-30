@@ -1,7 +1,12 @@
 import type { AlertWithTier } from "@/lib/filters/delivery-rules";
 import { verificationLabel } from "@/lib/filters/cross-verify";
-import { formatDiscountForTelegram } from "@/lib/filters/discount-context";
+import {
+  formatCalendarEventLine,
+  getUpcomingMacroEvents,
+  isCalendarConfigured,
+} from "@/lib/fetchers/econ-calendar";
 import { formatMacroForTelegram } from "@/lib/fetchers/macro-context";
+import { formatDiscountForTelegram } from "@/lib/filters/discount-context";
 import type { MacroContextSnapshot } from "@/lib/types";
 import { translateAlertText } from "@/lib/notifiers/translate";
 import {
@@ -125,11 +130,22 @@ export async function formatDigestReport(
     }
   }
 
-  // 2. Eventos programados (placeholder — calendario externo)
-  lines.push("", "<b>2. Eventos macro programados</b>");
-  lines.push(
-    "Consultar calendario: CPI, PPI, NFP, FOMC, PMI, PCE. Priorizar consenso de Wall Street vs dato real."
-  );
+  // 2. Eventos macro programados (calendario Finnhub)
+  lines.push("", "<b>2. Eventos macro programados (EE.UU.)</b>");
+  if (isCalendarConfigured()) {
+    const upcoming = await getUpcomingMacroEvents(3);
+    if (upcoming.length === 0) {
+      lines.push("Sin eventos de alto impacto en las próximas 72h.");
+    } else {
+      for (const ev of upcoming) {
+        lines.push(`· ${formatCalendarEventLine(ev)}`);
+      }
+    }
+  } else {
+    lines.push(
+      "Configura FINNHUB_API_KEY en Railway para ver CPI/NFP/PCE con consenso Wall Street automático."
+    );
+  }
 
   // 3. Sesgo institucional
   lines.push("", "<b>3. Sesgo institucional (proxy)</b>");

@@ -71,6 +71,8 @@ export interface DiscountContext {
   xauChange5d: number | null;
   dxyChange5d: number | null;
   interpretation: string;
+  consensusSource?: "headline" | "calendar" | "calendar+headline";
+  calendarEventName?: string;
 }
 
 export interface PriceSnapshot {

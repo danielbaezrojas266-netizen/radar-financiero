@@ -4,15 +4,24 @@ import {
   type ParsedMacroNumbers,
 } from "@/lib/fetchers/macro-releases";
 import {
+  enrichFromCalendar,
+  isCalendarConfigured,
+} from "@/lib/fetchers/econ-calendar";
+import {
   fetch5DayMoves,
   formatChangePct,
 } from "@/lib/fetchers/price-history";
 import type { Alert, DiscountContext } from "@/lib/types";
 
-function classifySurprise(parsed: ParsedMacroNumbers): DiscountContext["surprise"] {
-  if (parsed.actual == null || parsed.consensus == null) return "unknown";
-  const diff = parsed.actual - parsed.consensus;
-  if (Math.abs(diff) < 0.05) return "inline";
+function classifySurprise(
+  actual: number | undefined,
+  consensus: number | undefined,
+  unit: DiscountContext["unit"]
+): DiscountContext["surprise"] {
+  if (actual == null || consensus == null) return "unknown";
+  const threshold = unit === "k_jobs" ? 15 : 0.05;
+  const diff = actual - consensus;
+  if (Math.abs(diff) < threshold) return "inline";
   return diff > 0 ? "above_consensus" : "below_consensus";
 }
 
@@ -22,8 +31,6 @@ function buildInterpretation(
   dxy5d: number | null,
   surprise: DiscountContext["surprise"]
 ): string {
-  const parts: string[] = [];
-
   const hawkishSurprise =
     surprise === "above_consensus" &&
     ["cpi", "core_cpi", "ppi", "pce"].includes(parsed.indicator);
@@ -35,39 +42,76 @@ function buildInterpretation(
   const xauAlreadyUp = xau5d != null && xau5d >= 0.8;
   const xauFlat = xau5d != null && Math.abs(xau5d) < 0.5;
   const dxyAlreadyUp = dxy5d != null && dxy5d >= 0.4;
-  const dxyAlreadyDown = dxy5d != null && dxy5d <= -0.4;
 
   if (hawkishSurprise && xauAlreadyDown && dxyAlreadyUp) {
-    parts.push(
-      "Escenario hawkish posiblemente descontado: XAU ya débil y DXY firme en 5d antes del dato"
-    );
-  } else if (hawkishSurprise && xauFlat) {
-    parts.push(
-      "Sorpresa hawkish con XAU plano previo: reacción bajista en oro puede ser más marcada"
-    );
-  } else if (dovishSurprise && xauAlreadyUp) {
-    parts.push(
-      "Sorpresa dovish con XAU ya fuerte en 5d: ampliación alcista puede ser limitada (buy-the-rumor)"
-    );
-  } else if (dovishSurprise && xauFlat) {
-    parts.push(
-      "Sorpresa dovish con oro sin moverse antes: upside en XAU menos descontado"
-    );
-  } else if (surprise === "inline" && (xauAlreadyDown || xauAlreadyUp)) {
-    parts.push(
-      "Dato en línea con consenso; movimiento previo de XAU sugiere parte del escenario ya en precio"
-    );
-  } else if (surprise === "unknown") {
-    parts.push(
-      "Consenso no detectado en titular — comparar manualmente con calendario económico"
-    );
-  } else {
-    parts.push(
-      "Evaluar si el movimiento 5d de XAU/DXY es coherente con la sorpresa del dato"
-    );
+    return "Escenario hawkish posiblemente descontado: XAU ya débil y DXY firme en 5d antes del dato";
+  }
+  if (hawkishSurprise && xauFlat) {
+    return "Sorpresa hawkish con XAU plano previo: reacción bajista en oro puede ser más marcada";
+  }
+  if (dovishSurprise && xauAlreadyUp) {
+    return "Sorpresa dovish con XAU ya fuerte en 5d: ampliación alcista puede ser limitada (buy-the-rumor)";
+  }
+  if (dovishSurprise && xauFlat) {
+    return "Sorpresa dovish con oro sin moverse antes: upside en XAU menos descontado";
+  }
+  if (surprise === "inline" && (xauAlreadyDown || xauAlreadyUp)) {
+    return "Dato en línea con consenso Wall Street; movimiento previo de XAU sugiere parte del escenario ya en precio";
+  }
+  if (surprise === "unknown") {
+    if (isCalendarConfigured()) {
+      return "Sin consenso en calendario para este evento — revisar titular manualmente";
+    }
+    return "Añade FINNHUB_API_KEY en Railway para consenso automático del calendario";
+  }
+  return "Evaluar si el movimiento 5d de XAU/DXY es coherente con la sorpresa vs consenso Wall Street";
+}
+
+async function mergeWithCalendar(
+  parsed: ParsedMacroNumbers,
+  publishedAt: string
+): Promise<{
+  actual?: number;
+  consensus?: number;
+  previous?: number;
+  consensusSource?: DiscountContext["consensusSource"];
+  calendarEventName?: string;
+}> {
+  let actual = parsed.actual;
+  let consensus = parsed.consensus;
+  let previous = parsed.previous;
+  let consensusSource: DiscountContext["consensusSource"] | undefined;
+  let calendarEventName: string | undefined;
+
+  const hadHeadlineConsensus = parsed.consensus != null;
+
+  const cal = await enrichFromCalendar(parsed.indicator, publishedAt);
+  if (cal) {
+    calendarEventName = cal.eventName;
+    if (consensus == null && cal.estimate != null) {
+      consensus = cal.estimate;
+      consensusSource = "calendar";
+    }
+    if (previous == null && cal.previous != null) {
+      previous = cal.previous;
+    }
+    if (actual == null && cal.actual != null) {
+      actual = cal.actual;
+    }
+    if (hadHeadlineConsensus && cal.estimate != null) {
+      consensusSource = "calendar+headline";
+    }
+  } else if (hadHeadlineConsensus) {
+    consensusSource = "headline";
   }
 
-  return parts.join(" ");
+  return {
+    actual,
+    consensus,
+    previous,
+    consensusSource,
+    calendarEventName,
+  };
 }
 
 export function isXauMacroAlert(alert: Alert): boolean {
@@ -88,14 +132,20 @@ export async function buildDiscountContext(
   const parsed = parseMacroFromText(alert.title, alert.summary);
   if (!parsed) return null;
 
+  const merged = await mergeWithCalendar(parsed, alert.publishedAt);
   const { xau, dxy } = await fetch5DayMoves();
-  const surprise = classifySurprise(parsed);
+
+  const actual = merged.actual ?? parsed.actual;
+  const consensus = merged.consensus ?? parsed.consensus;
+  const previous = merged.previous ?? parsed.previous;
+
+  const surprise = classifySurprise(actual, consensus, parsed.unit);
 
   return {
     indicator: parsed.indicatorLabel,
-    actual: parsed.actual,
-    consensus: parsed.consensus,
-    previous: parsed.previous,
+    actual,
+    consensus,
+    previous,
     unit: parsed.unit,
     surprise,
     xauChange5d: xau?.changePct ?? null,
@@ -106,17 +156,31 @@ export async function buildDiscountContext(
       dxy?.changePct ?? null,
       surprise
     ),
+    consensusSource: merged.consensusSource,
+    calendarEventName: merged.calendarEventName,
   };
 }
 
 export function formatDiscountForTelegram(ctx: DiscountContext): string {
   const lines = ["<b>📊 Contexto de descuento (XAU)</b>"];
 
+  if (ctx.calendarEventName) {
+    lines.push(`· Evento calendario: ${ctx.calendarEventName}`);
+  }
+
   const actual = formatValue(ctx.actual, ctx.unit);
   const previous = formatValue(ctx.previous, ctx.unit);
   const consensus = formatValue(ctx.consensus, ctx.unit);
 
-  lines.push(`· ${ctx.indicator}: ${actual} (ant. ${previous}) vs consenso ${consensus}`);
+  const sourceLabel = {
+    calendar: " (consenso Wall Street · calendario)",
+    headline: " (consenso en titular)",
+    "calendar+headline": " (consenso calendario + titular)",
+  }[ctx.consensusSource ?? "calendar"];
+
+  lines.push(
+    `· ${ctx.indicator}: ${actual} (ant. ${previous}) vs consenso ${consensus}${ctx.consensusSource ? sourceLabel : ""}`
+  );
 
   if (ctx.xauChange5d != null) {
     lines.push(`· XAU/USD 5d: ${formatChangePct(ctx.xauChange5d)}`);
@@ -126,9 +190,9 @@ export function formatDiscountForTelegram(ctx: DiscountContext): string {
   }
 
   const surpriseEs = {
-    above_consensus: "por encima del consenso",
-    below_consensus: "por debajo del consenso",
-    inline: "en línea con consenso",
+    above_consensus: "por encima del consenso Wall Street",
+    below_consensus: "por debajo del consenso Wall Street",
+    inline: "en línea con consenso Wall Street",
     unknown: "sorpresa no calculada",
   }[ctx.surprise];
 

@@ -14,7 +14,10 @@ X_API_DISABLED=true
 CRON_SECRET=elige_un_secreto_largo
 NEXT_PUBLIC_APP_URL=https://radar-financiero-production.up.railway.app
 ALERTS_LOCALE=es
+FINNHUB_API_KEY=tu_clave_finnhub
 ```
+
+`FINNHUB_API_KEY` es **recomendada** para consenso Wall Street automático (CPI, NFP, PCE, PPI) vía calendario económico. Gratis en [finnhub.io/register](https://finnhub.io/register).
 
 ## Opción A — Railway (recomendado, ~5 min)
 
