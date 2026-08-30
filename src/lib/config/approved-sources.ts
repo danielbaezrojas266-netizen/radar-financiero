@@ -51,6 +51,10 @@ export function isApprovedSource(sourceId: string, sourceName: string): boolean 
     const user = sourceId.replace("x-browser-", "").toLowerCase();
     return APPROVED_X_USERNAMES.has(user);
   }
+  if (sourceId.startsWith("x-")) {
+    const user = sourceId.replace("x-", "").toLowerCase();
+    return APPROVED_X_USERNAMES.has(user);
+  }
   const xUser = extractXUsername(sourceName);
   if (xUser && APPROVED_X_USERNAMES.has(xUser)) return true;
   return false;

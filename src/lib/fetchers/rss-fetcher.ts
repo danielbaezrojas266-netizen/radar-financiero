@@ -2,6 +2,7 @@ import Parser from "rss-parser";
 import { categorizeItem } from "@/lib/filters/categorizer";
 import { buildNitterRssUrls } from "@/lib/config/nitter-instances";
 import { FEED_SOURCES } from "@/lib/config/sources";
+import { isXApiOperational } from "@/lib/fetchers/x-api";
 import { checkXBrowserSession, isXBrowserDisabled } from "@/lib/fetchers/x-browser";
 import type { Alert, FeedSource } from "@/lib/types";
 
@@ -105,12 +106,15 @@ export async function fetchAllRssAlerts(): Promise<{
   alerts: Alert[];
   activeSources: string[];
   failedSources: string[];
-  xMode: "browser" | "nitter" | "disabled";
+  xMode: "api" | "browser" | "nitter" | "disabled";
 }> {
   let useNitterFallback = true;
-  let xMode: "browser" | "nitter" | "disabled" = "nitter";
+  let xMode: "api" | "browser" | "nitter" | "disabled" = "nitter";
 
-  if (!isXBrowserDisabled()) {
+  if (isXApiOperational()) {
+    useNitterFallback = false;
+    xMode = "api";
+  } else if (!isXBrowserDisabled()) {
     const browserSession = await checkXBrowserSession();
     useNitterFallback = !browserSession.loggedIn;
     xMode = browserSession.loggedIn ? "browser" : "nitter";

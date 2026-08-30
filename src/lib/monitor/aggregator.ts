@@ -2,6 +2,7 @@ import { fetchWhaleAlerts } from "@/lib/fetchers/btc-whales";
 import { fetchPrices } from "@/lib/fetchers/prices";
 import { fetchAllRssAlerts } from "@/lib/fetchers/rss-fetcher";
 import { fetchXBrowserAlerts } from "@/lib/fetchers/x-browser";
+import { fetchXAlerts, isXApiOperational, isXConfigured } from "@/lib/fetchers/x-api";
 import { applyDeliveryRules, type AlertWithTier } from "@/lib/filters/delivery-rules";
 import { FEED_SOURCES } from "@/lib/config/sources";
 import type { Alert, MonitorStatus, PriceSnapshot } from "@/lib/types";
@@ -52,10 +53,18 @@ export async function runScan(): Promise<ScanResult> {
     fetchPrices(),
   ]);
 
-  const xResult =
-    rssResult.xMode === "browser"
-      ? await fetchXBrowserAlerts()
-      : { alerts: [], activeAccounts: [], failedAccounts: [], loggedIn: false };
+  let xApiAlerts: Alert[] = [];
+  let xApiActive: string[] = [];
+
+  if (isXApiOperational()) {
+    const api = await fetchXAlerts();
+    xApiAlerts = api.alerts;
+    xApiActive = api.activeAccounts;
+  } else if (rssResult.xMode === "browser") {
+    const browser = await fetchXBrowserAlerts();
+    xApiAlerts = browser.alerts;
+    xApiActive = browser.activeAccounts;
+  }
 
   const btcPrice =
     prices.find((p) => p.symbol === "BTC/USD")?.price ?? 95000;
@@ -63,7 +72,7 @@ export async function runScan(): Promise<ScanResult> {
 
   const filtered = applyDeliveryRules(
     dedupeAlerts(
-      sortAlerts([...rssResult.alerts, ...xResult.alerts, ...whaleAlerts])
+      sortAlerts([...rssResult.alerts, ...xApiAlerts, ...whaleAlerts])
     )
   );
 
@@ -90,11 +99,11 @@ export async function runScan(): Promise<ScanResult> {
     (a) => new Date(a.publishedAt) >= todayStart
   ).length;
 
-  const xSourceCount = xResult.loggedIn
-    ? xResult.activeAccounts.length
-    : rssResult.xMode !== "browser"
-      ? rssResult.activeSources.filter((id) => id.startsWith("nitter-")).length
-      : 0;
+  const xSourceCount = isXApiOperational()
+    ? xApiActive.length
+    : rssResult.xMode === "browser"
+      ? xApiActive.length
+      : rssResult.activeSources.filter((id) => id.startsWith("nitter-")).length;
 
   const rssOnlyCount = FEED_SOURCES.filter(
     (s) => s.enabled && s.type !== "twitter_rss"
@@ -113,7 +122,12 @@ export async function runScan(): Promise<ScanResult> {
       lastScan: lastScanTime,
       sourcesActive: rssResult.activeSources.length + xSourceCount,
       sourcesTotal:
-        rssOnlyCount + (rssResult.xMode !== "browser" ? nitterCount : xResult.loggedIn ? xResult.activeAccounts.length : 0),
+        rssOnlyCount +
+        (isXApiOperational()
+          ? xApiActive.length
+          : rssResult.xMode !== "browser"
+            ? nitterCount
+            : xApiActive.length),
       alertsToday,
       isScanning: false,
     },

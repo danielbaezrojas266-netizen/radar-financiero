@@ -67,7 +67,7 @@ interface XTweet {
 
 function accountToFeedSource(account: (typeof X_ACCOUNTS)[0]): FeedSource {
   return {
-    id: `x-${account.username}`,
+    id: `x-${account.username.toLowerCase()}`,
     name: account.name,
     url: `https://x.com/${account.username}`,
     type: "rss",
