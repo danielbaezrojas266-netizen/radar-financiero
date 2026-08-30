@@ -1,18 +1,26 @@
-import { NOISE_PATTERNS } from "@/lib/config/keywords";
+import {
+  CRYPTO_FUD_HYPE,
+  NOISE_PATTERNS,
+} from "@/lib/config/keywords";
 
-/** Análisis técnico repetitivo — siempre ruido */
+/** Análisis técnico retail — siempre ruido */
 const TECHNICAL_ANALYSIS_PATTERNS = [
-  /\b(rsi|macd|fibonacci|fib|support level|resistance level|soporte|resistencia|breakout|breakdown|head and shoulders|hombro-cabeza-hombro|moving average|media móvil|bollinger|ichimoku|chart pattern|patrón gráfico|technical analysis|análisis técnico|price target|objetivo de precio)\b/i,
-  /\b(oversold|overbought|sobrecompra|sobreventa|golden cross|death cross|cup and handle|triángulo|wedge|cuña)\b/i,
-  /\b(long setup|short setup|entry at|stop loss|take profit|entrada en|salida en)\b/i,
+  /\b(rsi|macd|fibonacci|fib|support level|resistance level|breakout|breakdown|head and shoulders|moving average|bollinger|ichimoku|chart pattern|technical analysis|price target)\b/i,
+  /\b(oversold|overbought|golden cross|death cross|cup and handle)\b/i,
+  /\b(long setup|short setup|stop loss|take profit)\b/i,
+  /\b(candlestick|patrón de velas|soporte|resistencia)\b/i,
 ];
 
-/** Opiniones personales y especulación */
+/** Opiniones y especulación retail */
 const OPINION_PATTERNS = [
-  /\b(i think|creo que|in my opinion|en mi opinión|my take|mi lectura|probably|probablemente|might|podría ser|guess|supongo)\b/i,
-  /\b(prediction|predicción|forecast|pronóstico|expect|espero que|likely to|probablemente suba|probablemente baje)\b/i,
-  /\b(thread 🧵|hilo 🧵|unpopular opinion|opinión impopular|hot take)\b/i,
+  /\b(i think|in my opinion|my take|probably|might|guess|hot take)\b/i,
+  /\b(prediction|forecast|expect|likely to|price will|target price)\b/i,
+  /\b(thread 🧵|unpopular opinion|guru|influencer)\b/i,
 ];
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 export function isNoise(
   title: string,
@@ -25,6 +33,14 @@ export function isNoise(
     if (pattern.test(text)) return true;
   }
 
+  for (const pattern of CRYPTO_FUD_HYPE) {
+    const hasData =
+      /\b(\$[\d,.]+[kmb]?|\d+\s*btc|\d+\s*million|\d+\s*billion|on-chain|etf flow|inflow|outflow|wallet|address|hash|verified|sec filing|cftc|official)\b/i.test(
+        text
+      );
+    if (pattern.test(text) && !hasData) return true;
+  }
+
   for (const pattern of TECHNICAL_ANALYSIS_PATTERNS) {
     if (pattern.test(text)) return true;
   }
@@ -33,24 +49,31 @@ export function isNoise(
     if (pattern.test(text)) return true;
   }
 
-  // Opiniones alcistas/bajistas sin evento duro
   const emotionalOnly =
-    /\b(bullish|bearish|super\s+bullish|crash\s+incoming|buy\s+now|sell\s+now|compra ya|vende ya|moon|dump)\b/i.test(
+    /\b(bullish|bearish|super\s+bullish|buy\s+now|sell\s+now|moon|dump|fud)\b/i.test(
       text
     ) &&
-    !/\b(fed|cpi|ppi|fomc|sec|etf|inflation|employment|war|guerra|sanctions|bankruptcy|quiebra)\b/i.test(
+    !/\b(fed|cpi|ppi|fomc|sec|etf|inflation|employment|nfp|pce|sanctions|bankruptcy|whale|transfer|inflow|outflow|dxy|yield|cot|gld)\b/i.test(
       text
     );
 
   if (emotionalOnly) return true;
 
-  // Cuentas de baja credibilidad siempre filtradas
   if (credibility < 9) return true;
 
   return false;
 }
 
 export function hasRelevantKeyword(text: string, terms: string[]): string[] {
-  const lower = text.toLowerCase();
-  return terms.filter((term) => lower.includes(term.toLowerCase()));
+  const matched: string[] = [];
+  for (const term of terms) {
+    const t = term.toLowerCase();
+    if (t.includes(" ")) {
+      if (text.toLowerCase().includes(t)) matched.push(term);
+    } else {
+      const re = new RegExp(`\\b${escapeRegex(t)}\\b`, "i");
+      if (re.test(text)) matched.push(term);
+    }
+  }
+  return matched;
 }

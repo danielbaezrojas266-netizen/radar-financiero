@@ -45,6 +45,16 @@ function resolvePriority(
   credibility: number
 ): AlertPriority {
   const lower = text.toLowerCase();
+
+  const analystOnly =
+    /\b(analyst|analista|bank forecasts|projection|outlook|price target|estimates|guidance)\b/i.test(
+      lower
+    ) &&
+    !/\b(cpi|ppi|fomc|nfp|pce|sec|etf|bankruptcy|hack|invasion|sanctions)\b/i.test(
+      lower
+    );
+  if (analystOnly) return "medium";
+
   const isCritical = CRITICAL_BOOST_TERMS.some((t) => lower.includes(t));
   if (isCritical || credibility >= 10) return "critical";
   if (base === "critical") return "critical";

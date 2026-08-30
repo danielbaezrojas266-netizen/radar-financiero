@@ -1,10 +1,17 @@
-import type { Alert } from "@/lib/types";
 import {
   isApprovedSource,
   BLOCKCHAIN_SOURCE_IDS,
 } from "@/lib/config/approved-sources";
-
-export type DeliveryTier = "instant" | "digest" | "dropped";
+import {
+  CRITICAL_EVENT_TERMS,
+  CRITICAL_BOOST_TERMS,
+} from "@/lib/config/keywords";
+import {
+  applyCrossVerification,
+  canBeCriticalInstant,
+  detectConsensusNote,
+} from "@/lib/filters/cross-verify";
+import type { Alert, DeliveryTier, MacroContextSnapshot } from "@/lib/types";
 
 export type AlertWithTier = Alert & { deliveryTier: DeliveryTier };
 
@@ -12,103 +19,110 @@ function textOf(alert: Alert): string {
   return `${alert.title} ${alert.summary}`.toLowerCase();
 }
 
-/** Categoría 1 — único motivo de alerta instantánea a Telegram */
-export function isCategory1(alert: Alert): boolean {
+function isCriticalEvent(alert: Alert): boolean {
   const text = textOf(alert);
-  const src = alert.sourceName.toLowerCase();
-
-  const isOfficial =
-    src.includes("bls") ||
-    src.includes("bea") ||
-    src.includes("reuters") ||
-    src.includes("fed") ||
-    src.includes("sec") ||
-    src.includes("cftc") ||
-    src.includes("@federalreserve") ||
-    src.includes("@reuters");
-
-  // Datos oficiales CPI / PPI
-  if (
-    isOfficial &&
-    /\b(cpi|ppi|consumer price index|producer price index|datos de inflación|inflation report|reporte de inflación)\b/i.test(
-      text
-    )
-  ) {
-    return true;
-  }
-
-  // Decisiones de tasas Fed / FOMC
-  if (
-    alert.category === "fed" &&
-    isOfficial &&
-    /\b(fomc|rate decision|decisión de tasas|rate cut|rate hike|recorte de tasas|subida de tasas|fed funds|basis points|puntos básicos)\b/i.test(
-      text
-    )
-  ) {
-    return true;
-  }
-
-  // Quiebras / defaults
-  if (
-    /\b(bankruptcy|bankrupt|quiebra|chapter 11|insolvency|insolvencia|bank failure|fallo bancario|default|colapso bancario)\b/i.test(
-      text
-    ) &&
-    (src.includes("reuters") || src.includes("business") || src.includes("sec"))
-  ) {
-    return true;
-  }
-
-  // Regulación fuerte BTC
-  if (
-    alert.category === "btc_regulation" &&
-    /\b(etf approval|etf aprobado|spot etf|enforcement action|acción de enforcement|prohibición|ban crypto|ley aprobada|sec charges|sec sue|demanda sec|cftc charges|multa millonaria)\b/i.test(
-      text
-    ) &&
-    (src.includes("sec") ||
-      src.includes("cftc") ||
-      src.includes("reuters") ||
-      src.includes("business"))
-  ) {
-    return true;
-  }
-
-  // Guerra / conflicto con impacto en oro
-  if (
-    alert.category === "geopolitics" &&
-    /\b(war|guerra|invasion|invasión|military strike|ataque militar|missile|misil|nuclear|conflicto armado|invasion)\b/i.test(
-      text
-    ) &&
-    (/\b(gold|oro|safe haven|refugio|xau|oro físico|physical gold)\b/i.test(
-      text
-    ) ||
-      src.includes("reuters"))
-  ) {
-    return true;
-  }
-
-  return false;
+  return CRITICAL_EVENT_TERMS.some((t) => {
+    if (t.includes(" ")) return text.includes(t);
+    return new RegExp(`\\b${t}\\b`, "i").test(text);
+  });
 }
 
-function assignTier(alert: Alert): DeliveryTier {
-  const sourceId = alert.sourceId ?? "";
+function isHighTierEvent(alert: Alert): boolean {
+  if (alert.priority === "high") return true;
+  const text = textOf(alert);
+  return CRITICAL_BOOST_TERMS.some((t) => text.includes(t));
+}
 
-  if (!isApprovedSource(sourceId, alert.sourceName)) {
+function assignTier(alert: Alert, macro?: MacroContextSnapshot): DeliveryTier {
+  if (!isApprovedSource(alert.sourceId, alert.sourceName)) {
     return "dropped";
   }
 
-  if (BLOCKCHAIN_SOURCE_IDS.has(sourceId)) {
+  if (alert.priority === "medium") {
     return "digest";
   }
 
-  if (isCategory1(alert)) {
+  if (BLOCKCHAIN_SOURCE_IDS.has(alert.sourceId)) {
+    return alert.priority === "high" ? "batch_15m" : "digest";
+  }
+
+  const isCritical =
+    alert.priority === "critical" && isCriticalEvent(alert);
+
+  if (isCritical && canBeCriticalInstant(alert)) {
     return "instant";
+  }
+
+  if (
+    macro &&
+    alert.category === "macro" &&
+    (macro.dxyShock || macro.tipsShock) &&
+    alert.title.includes("Movimiento abrupto macro")
+  ) {
+    return "instant";
+  }
+
+  if (alert.priority === "critical" && !canBeCriticalInstant(alert)) {
+    return "batch_15m";
+  }
+
+  if (alert.priority === "high" || isHighTierEvent(alert)) {
+    return "batch_15m";
   }
 
   return "digest";
 }
 
-export function applyDeliveryRules(alerts: Alert[]): AlertWithTier[] {
-  return alerts
-    .map((alert) => ({ ...alert, deliveryTier: assignTier(alert) }))
+export function applyDeliveryRules(
+  alerts: Alert[],
+  macro?: MacroContextSnapshot
+): AlertWithTier[] {
+  const verified = applyCrossVerification(alerts);
+
+  return verified
+    .map((alert) => {
+      const tier = assignTier(alert, macro);
+      const consensusNote = detectConsensusNote(textOf(alert));
+      return {
+        ...alert,
+        deliveryTier: tier,
+        macroContext: alert.assets.includes("XAU") ? macro : alert.macroContext,
+        consensusNote: consensusNote ?? alert.consensusNote,
+        priceReactionNote: buildPriceReactionNote(alert, macro),
+      };
+    })
     .filter((a) => a.deliveryTier !== "dropped");
+}
+
+function buildPriceReactionNote(
+  alert: Alert,
+  macro?: MacroContextSnapshot
+): string | undefined {
+  if (!macro) return undefined;
+  if (!alert.assets.includes("XAU") && !alert.assets.includes("BTC")) {
+    return undefined;
+  }
+
+  const parts: string[] = [];
+  if (alert.assets.includes("XAU") && macro.xauUsd) {
+    parts.push(
+      `XAU ${macro.xauUsd.changePct >= 0 ? "+" : ""}${macro.xauUsd.changePct.toFixed(2)}% (24h)`
+    );
+  }
+  if (alert.assets.includes("BTC") && macro.btcUsd) {
+    parts.push(
+      `BTC ${macro.btcUsd.changePct >= 0 ? "+" : ""}${macro.btcUsd.changePct.toFixed(2)}% (24h)`
+    );
+  }
+
+  if (alert.assets.includes("XAU") && macro.dxy) {
+    const corr =
+      (macro.dxy.direction === "up" && macro.xauUsd && macro.xauUsd.changePct < 0) ||
+      (macro.dxy.direction === "down" && macro.xauUsd && macro.xauUsd.changePct > 0)
+        ? "correlación DXY-oro coherente"
+        : "posible divergencia DXY-oro";
+    parts.push(corr);
+  }
+
+  return parts.length ? parts.join(" · ") : undefined;
 }

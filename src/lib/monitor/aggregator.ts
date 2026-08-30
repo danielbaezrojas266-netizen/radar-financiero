@@ -1,32 +1,42 @@
 import { fetchWhaleAlerts } from "@/lib/fetchers/btc-whales";
 import { fetchPrices } from "@/lib/fetchers/prices";
+import {
+  buildDxyShockAlert,
+  fetchMacroContext,
+} from "@/lib/fetchers/macro-context";
 import { fetchAllRssAlerts } from "@/lib/fetchers/rss-fetcher";
 import { fetchXBrowserAlerts } from "@/lib/fetchers/x-browser";
-import { fetchXAlerts, isXApiOperational, isXConfigured } from "@/lib/fetchers/x-api";
-import { applyDeliveryRules, type AlertWithTier } from "@/lib/filters/delivery-rules";
+import {
+  fetchXAlerts,
+  isXApiOperational,
+} from "@/lib/fetchers/x-api";
+import {
+  applyDeliveryRules,
+  type AlertWithTier,
+} from "@/lib/filters/delivery-rules";
+import {
+  attachEventKeys,
+  dedupeByEvent,
+  filterAlreadyAlerted,
+} from "@/lib/filters/event-dedup";
 import { localizeAlerts } from "@/lib/notifiers/translate-alerts";
 import { FEED_SOURCES } from "@/lib/config/sources";
-import type { Alert, MonitorStatus, PriceSnapshot } from "@/lib/types";
+import type {
+  Alert,
+  MacroContextSnapshot,
+  MonitorStatus,
+  PriceSnapshot,
+} from "@/lib/types";
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2 };
 
 let cachedAlerts: Alert[] = [];
 let lastScanTime = "";
+let lastMacro: MacroContextSnapshot | undefined;
 let seenIds = new Set<string>();
 
 function dedupeAlerts(alerts: Alert[]): Alert[] {
-  const map = new Map<string, Alert>();
-  for (const alert of alerts) {
-    const key = `${alert.category}-${alert.title.slice(0, 80)}`;
-    const existing = map.get(key);
-    if (
-      !existing ||
-      new Date(alert.publishedAt) > new Date(existing.publishedAt)
-    ) {
-      map.set(key, alert);
-    }
-  }
-  return Array.from(map.values());
+  return dedupeByEvent(alerts);
 }
 
 function sortAlerts(alerts: Alert[]): Alert[] {
@@ -43,8 +53,10 @@ export interface ScanResult {
   alerts: AlertWithTier[];
   newAlerts: AlertWithTier[];
   instantAlerts: AlertWithTier[];
+  batch15mAlerts: AlertWithTier[];
   digestAlerts: AlertWithTier[];
   prices: PriceSnapshot[];
+  macroContext?: MacroContextSnapshot;
   status: MonitorStatus;
 }
 
@@ -53,6 +65,9 @@ export async function runScan(): Promise<ScanResult> {
     fetchAllRssAlerts(),
     fetchPrices(),
   ]);
+
+  const macroContext = await fetchMacroContext(prices);
+  lastMacro = macroContext;
 
   let xApiAlerts: Alert[] = [];
   let xApiActive: string[] = [];
@@ -71,15 +86,46 @@ export async function runScan(): Promise<ScanResult> {
     prices.find((p) => p.symbol === "BTC/USD")?.price ?? 95000;
   const whaleAlerts = await fetchWhaleAlerts(btcPrice);
 
-  const filtered = applyDeliveryRules(
+  const shock = await buildDxyShockAlert(macroContext);
+  const macroShockAlerts: Alert[] = shock
+    ? [
+        {
+          id: `macro-shock-${Date.now()}`,
+          sourceId: "macro-monitor",
+          category: shock.category,
+          priority: shock.priority,
+          title: shock.title,
+          summary: shock.summary,
+          source: "macro_calendar" as const,
+          sourceName: "Radar Macro (DXY/Yields)",
+          publishedAt: new Date().toISOString(),
+          assets: ["XAU", "BTC"] as ("XAU" | "BTC")[],
+          keywords: ["dxy", "yield"],
+          macroContext,
+        },
+      ]
+    : [];
+
+  const rawAlerts = attachEventKeys(
     dedupeAlerts(
-      sortAlerts([...rssResult.alerts, ...xApiAlerts, ...whaleAlerts])
+      sortAlerts([
+        ...rssResult.alerts,
+        ...xApiAlerts,
+        ...whaleAlerts,
+        ...macroShockAlerts,
+      ])
     )
   );
 
+  const filtered = applyDeliveryRules(rawAlerts, macroContext);
+
   const allAlerts: AlertWithTier[] = filtered;
   const newAlerts = allAlerts.filter((a) => !seenIds.has(a.id));
-  const instantAlerts = newAlerts.filter((a) => a.deliveryTier === "instant");
+
+  const instantCandidates = filterAlreadyAlerted(
+    newAlerts.filter((a) => a.deliveryTier === "instant")
+  );
+  const batch15mAlerts = newAlerts.filter((a) => a.deliveryTier === "batch_15m");
   const digestAlerts = newAlerts.filter((a) => a.deliveryTier === "digest");
 
   for (const alert of allAlerts) {
@@ -117,14 +163,20 @@ export async function runScan(): Promise<ScanResult> {
 
   return {
     alerts: localizedAlerts,
-    newAlerts: localizedAlerts.filter((a) => newAlerts.some((n) => n.id === a.id)),
+    newAlerts: localizedAlerts.filter((a) =>
+      newAlerts.some((n) => n.id === a.id)
+    ),
     instantAlerts: localizedAlerts.filter((a) =>
-      instantAlerts.some((n) => n.id === a.id)
+      instantCandidates.some((n) => n.id === a.id)
+    ),
+    batch15mAlerts: localizedAlerts.filter((a) =>
+      batch15mAlerts.some((n) => n.id === a.id)
     ),
     digestAlerts: localizedAlerts.filter((a) =>
       digestAlerts.some((n) => n.id === a.id)
     ),
     prices,
+    macroContext,
     status: {
       lastScan: lastScanTime,
       sourcesActive: rssResult.activeSources.length + xSourceCount,
@@ -137,6 +189,7 @@ export async function runScan(): Promise<ScanResult> {
             : xApiActive.length),
       alertsToday,
       isScanning: false,
+      macroContext,
     },
   };
 }
@@ -147,4 +200,8 @@ export function getCachedAlerts(): Alert[] {
 
 export function getLastScanTime(): string {
   return lastScanTime;
+}
+
+export function getLastMacroContext(): MacroContextSnapshot | undefined {
+  return lastMacro;
 }

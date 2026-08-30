@@ -9,6 +9,34 @@ export type AlertPriority = "critical" | "high" | "medium";
 
 export type AlertSource = "rss" | "twitter" | "blockchain" | "macro_calendar";
 
+export type VerificationStatus =
+  | "confirmed_traditional"
+  | "official_x"
+  | "on_chain_institutional"
+  | "early_signal_x"
+  | "rumor_moving_market";
+
+export type DeliveryTier = "instant" | "batch_15m" | "digest" | "dropped";
+
+export interface MacroContextSnapshot {
+  dxy: {
+    level: number;
+    changePct: number;
+    direction: "up" | "down" | "flat";
+  };
+  tips10y: {
+    level: number;
+    changeBps: number;
+    direction: "up" | "down" | "flat";
+    label: string;
+  };
+  xauUsd?: { price: number; changePct: number };
+  btcUsd?: { price: number; changePct: number };
+  dxyShock: boolean;
+  tipsShock: boolean;
+  fetchedAt: string;
+}
+
 export interface Alert {
   id: string;
   sourceId: string;
@@ -22,7 +50,13 @@ export interface Alert {
   publishedAt: string;
   assets: ("XAU" | "BTC")[];
   keywords: string[];
-  deliveryTier?: "instant" | "digest" | "dropped";
+  deliveryTier?: DeliveryTier;
+  verificationStatus?: VerificationStatus;
+  eventKey?: string;
+  macroContext?: MacroContextSnapshot;
+  priceReactionNote?: string;
+  /** Consenso vs dato real cuando aplique */
+  consensusNote?: string;
 }
 
 export interface PriceSnapshot {
@@ -38,6 +72,7 @@ export interface MonitorStatus {
   sourcesTotal: number;
   alertsToday: number;
   isScanning: boolean;
+  macroContext?: MacroContextSnapshot;
 }
 
 export interface FeedSource {

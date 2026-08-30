@@ -16,7 +16,7 @@ export default function Home() {
                 Radar Financiero
               </h1>
               <p className="text-xs text-zinc-500">
-                XAU/USD · BTC — Solo señales, sin ruido
+                XAU/USD · BTC — Trader manual + EAs MT4
               </p>
             </div>
           </div>
@@ -41,7 +41,7 @@ export default function Home() {
                 Modo
               </p>
               <p className="text-sm font-semibold text-emerald-400">
-                Observación · No ejecuta trades
+                Observación · Precaución operativa
               </p>
             </div>
           </div>
