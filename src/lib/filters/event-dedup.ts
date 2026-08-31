@@ -1,13 +1,13 @@
 import fs from "fs";
-import path from "path";
 import { EVENT_FINGERPRINT_TERMS } from "@/lib/config/keywords";
 import {
   GEOPOLITICAL_BACKGROUND_PATTERNS,
   GEOPOLITICAL_ESCALATION_PATTERNS,
 } from "@/lib/config/trader-policy";
+import { stateFile } from "@/lib/monitor/state-dir";
 import type { Alert } from "@/lib/types";
 
-const STATE_FILE = path.join(process.cwd(), ".alerted-events.json");
+const STATE_FILE = stateFile("alerted-events.json");
 
 function normalizeText(text: string): string {
   return text

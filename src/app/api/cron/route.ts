@@ -31,6 +31,10 @@ export async function GET(request: Request) {
       scanned: result.alerts.length,
       newAlerts: result.newAlerts.length,
       ...delivery,
+      note:
+        result.newAlerts.length === 0
+          ? "Sin alertas nuevas desde el último scan (normal si no hay eventos frescos). El digest solo se encola/envía cerca de 7:00 y 16:30 CR."
+          : undefined,
       macro: result.macroContext
         ? {
             dxy: result.macroContext.dxy.level,

@@ -1,13 +1,13 @@
 import fs from "fs";
-import path from "path";
 import type { AlertWithTier } from "@/lib/filters/delivery-rules";
 import {
   HIGH_PRIORITY_BATCH_MS,
   MAX_INSTANT_ALERTS_PER_HOUR,
   TRADER_TIMEZONE,
 } from "@/lib/config/trader-policy";
+import { stateFile } from "@/lib/monitor/state-dir";
 
-const STATE_FILE = path.join(process.cwd(), ".digest-queue.json");
+const STATE_FILE = stateFile("digest-queue.json");
 
 interface QueueState {
   digestPending: AlertWithTier[];
@@ -48,7 +48,11 @@ function loadState(): void {
 }
 
 function saveState(): void {
-  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+  try {
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+  } catch (error) {
+    console.error("[digest-queue] No se pudo guardar estado:", error);
+  }
 }
 
 loadState();

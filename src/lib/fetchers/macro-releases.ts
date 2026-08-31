@@ -1,5 +1,5 @@
 import fs from "fs";
-import path from "path";
+import { stateFile } from "@/lib/monitor/state-dir";
 
 export type MacroIndicator = "cpi" | "core_cpi" | "ppi" | "pce" | "nfp" | "fed_rate";
 
@@ -12,7 +12,7 @@ export interface MacroReleaseRecord {
   recordedAt: string;
 }
 
-const STORE_FILE = path.join(process.cwd(), ".macro-releases.json");
+const STORE_FILE = stateFile("macro-releases.json");
 
 /** Valores de referencia conocidos (fallback si aún no hay histórico local) */
 const BASELINE_PREVIOUS: Partial<
@@ -38,7 +38,11 @@ function load(): void {
 }
 
 function save(): void {
-  fs.writeFileSync(STORE_FILE, JSON.stringify(records.slice(-50), null, 2));
+  try {
+    fs.writeFileSync(STORE_FILE, JSON.stringify(records.slice(-50), null, 2));
+  } catch (error) {
+    console.error("[macro-releases] No se pudo guardar:", error);
+  }
 }
 
 load();

@@ -28,8 +28,8 @@ import {
 } from "@/lib/config/trader-policy";
 import { localizeAlerts } from "@/lib/notifiers/translate-alerts";
 import { FEED_SOURCES } from "@/lib/config/sources";
+import { stateFile } from "@/lib/monitor/state-dir";
 import fs from "fs";
-import path from "path";
 import type {
   Alert,
   MacroContextSnapshot,
@@ -38,7 +38,7 @@ import type {
 } from "@/lib/types";
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2 };
-const SEEN_FILE = path.join(process.cwd(), ".seen-alerts.json");
+const SEEN_FILE = stateFile("seen-alerts.json");
 
 let cachedAlerts: Alert[] = [];
 let lastScanTime = "";
