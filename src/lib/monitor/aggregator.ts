@@ -161,14 +161,18 @@ export async function runScan(): Promise<ScanResult> {
 
   const allAlerts: AlertWithTier[] = enriched;
 
-  // Arranque en frío / redeploy: marcar feed actual como visto, sin flood Telegram
+  // Arranque en frío / redeploy: marcar como visto solo lo VIEJO.
+  // Lo fresco (< MAX_INSTANT_AGE / MAX_BATCH_AGE) puede ir a Telegram.
   if (coldStart && seenIds.size === 0) {
-    seedSeenFromFeed(allAlerts);
-    for (const alert of allAlerts) seenIds.add(alert.id);
+    const stale = allAlerts.filter(
+      (a) => !isAlertFresh(a, MAX_BATCH_AGE_MS)
+    );
+    seedSeenFromFeed(stale);
+    for (const alert of stale) seenIds.add(alert.id);
     saveSeenIds();
     coldStart = false;
     console.log(
-      `[Scan] Cold start: ${allAlerts.length} alertas marcadas como vistas (sin Telegram)`
+      `[Scan] Cold start: ${stale.length} viejas marcadas; ${allAlerts.length - stale.length} frescas elegibles para Telegram`
     );
   }
 
