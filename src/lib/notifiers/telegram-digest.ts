@@ -94,12 +94,12 @@ export async function formatDigestReport(
 ): Promise<string> {
   const label =
     slot === "morning"
-      ? "🌅 Resumen programado — 7:00 AM (CR)"
-      : "🌇 Resumen programado — 4:30 PM (CR)";
+      ? "🌅 Resumen matutino (objetivo 7:00 AM CR)"
+      : "🌇 Resumen vespertino (objetivo 4:30 PM CR)";
 
   const lines: string[] = [
     `<b>${label}</b>`,
-    `<i>Radar Financiero · ${getTimezone()}</i>`,
+    `<i>Radar Financiero · ${getTimezone()} · enviado ${formatCostaRicaTime()}</i>`,
     "",
   ];
 

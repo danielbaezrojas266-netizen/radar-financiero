@@ -136,26 +136,32 @@ export function formatCostaRicaTime(iso?: string): string {
   }).format(d);
 }
 
+/**
+ * Ventanas con catch-up: si Railway dormía a las 7:00 / 16:30,
+ * el resumen se envía en el primer scan después de esa hora (mismo día).
+ * - Mañana: desde 7:00 hasta antes de las 16:30
+ * - Tarde: desde 16:30 hasta 23:59
+ */
 export function shouldSendDigest(): "morning" | "afternoon" | null {
   const tz = getTimezone();
   const nowMinutes = getLocalTimeMinutes(tz);
   const today = getLocalDateKey(tz);
 
-  const slots = [
-    { key: "morning" as const, start: 7 * 60, end: 7 * 60 + 45 },
-    { key: "afternoon" as const, start: 16 * 60 + 30, end: 16 * 60 + 75 },
-  ];
+  const morningStart = 7 * 60;
+  const afternoonStart = 16 * 60 + 30;
 
-  for (const slot of slots) {
-    if (nowMinutes >= slot.start && nowMinutes <= slot.end) {
-      if (slot.key === "morning" && state.lastSentMorning !== today) {
-        return "morning";
-      }
-      if (slot.key === "afternoon" && state.lastSentAfternoon !== today) {
-        return "afternoon";
-      }
-    }
+  if (
+    nowMinutes >= morningStart &&
+    nowMinutes < afternoonStart &&
+    state.lastSentMorning !== today
+  ) {
+    return "morning";
   }
+
+  if (nowMinutes >= afternoonStart && state.lastSentAfternoon !== today) {
+    return "afternoon";
+  }
+
   return null;
 }
 

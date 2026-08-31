@@ -63,7 +63,7 @@ Configura un cron gratis en [cron-job.org](https://cron-job.org) — **sin esto 
 4. Intervalo: **cada 5 minutos**
 5. Método: GET
 
-Esto ejecuta scan + Telegram cada 5 min y envía resúmenes a las 7:00 y 16:30 (CR).
+Esto ejecuta scan + Telegram cada 5 min. Los resúmenes salen a las **7:00** y **16:30** (CR). Si Railway estaba dormido a esa hora, el resumen se envía en el **primer wake** del día (catch-up). Sin cron externo, el plan free puede dormir y perder la ventana.
 
 ## Verificar
 
