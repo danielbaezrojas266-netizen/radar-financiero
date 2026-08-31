@@ -148,17 +148,12 @@ export async function runScan(): Promise<ScanResult> {
     (a) => new Date(a.publishedAt) >= todayStart
   ).length;
 
-  const xSourceCount = isXApiOperational()
-    ? xApiActive.length
-    : rssResult.xMode === "browser"
-      ? xApiActive.length
-      : rssResult.activeSources.filter((id) => id.startsWith("nitter-")).length;
-
-  const rssOnlyCount = FEED_SOURCES.filter(
-    (s) => s.enabled && s.type !== "twitter_rss"
+  const enabledSources = FEED_SOURCES.filter((s) => s.enabled);
+  const enabledRssCount = enabledSources.filter(
+    (s) => s.type !== "twitter_rss"
   ).length;
-  const nitterCount = FEED_SOURCES.filter(
-    (s) => s.enabled && s.type === "twitter_rss"
+  const enabledNitterCount = enabledSources.filter(
+    (s) => s.type === "twitter_rss"
   ).length;
 
   const localizedAlerts = await localizeAlerts(allAlerts);
@@ -181,14 +176,12 @@ export async function runScan(): Promise<ScanResult> {
     macroContext,
     status: {
       lastScan: lastScanTime,
-      sourcesActive: rssResult.activeSources.length + xSourceCount,
+      sourcesActive: rssResult.activeSources.length,
       sourcesTotal:
-        rssOnlyCount +
-        (isXApiOperational()
+        enabledRssCount +
+        (isXApiOperational() || rssResult.xMode === "browser"
           ? xApiActive.length
-          : rssResult.xMode !== "browser"
-            ? nitterCount
-            : xApiActive.length),
+          : enabledNitterCount),
       alertsToday,
       isScanning: false,
       macroContext,

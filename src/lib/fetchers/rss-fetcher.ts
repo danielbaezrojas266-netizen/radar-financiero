@@ -7,7 +7,8 @@ import { checkXBrowserSession, isXBrowserDisabled } from "@/lib/fetchers/x-brows
 import type { Alert, FeedSource } from "@/lib/types";
 
 const parser = new Parser({
-  timeout: 12000,
+  timeout: 15000,
+  maxRedirects: 5,
   headers: {
     "User-Agent": "RadarFinanciero/1.0 (Financial Monitoring)",
     Accept: "application/rss+xml, application/xml, text/xml",

@@ -2,12 +2,13 @@
 export const APPROVED_RSS_IDS = new Set([
   "fed-press",
   "fed-speeches",
-  "bls-news",
   "bea-news",
-  "reuters-markets",
-  "reuters-business",
+  "google-macro",
+  "google-gold",
+  "google-markets",
+  "google-btc",
+  "investing-commodities",
   "sec-press",
-  "cftc-press",
 ]);
 
 /** Usernames de X aprobados (minúsculas) */

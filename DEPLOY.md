@@ -65,17 +65,6 @@ Configura un cron gratis en [cron-job.org](https://cron-job.org) — **sin esto 
 
 Esto ejecuta scan + Telegram cada 5 min y envía resúmenes a las 7:00 y 16:30 (CR).
 
-## Backup — Cron externo (por si el free tier se duerme)
-
-Si el hosting “duerme” el servicio, crea un cron gratis en
-[cron-job.org](https://cron-job.org):
-
-- URL: `https://TU-URL/api/cron?secret=TU_CRON_SECRET`
-- Intervalo: **cada 5 minutos**
-- Método: GET
-
-Eso despierta el servidor y ejecuta un scan + Telegram.
-
 ## Verificar
 
 ```bash

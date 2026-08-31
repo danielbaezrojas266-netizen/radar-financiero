@@ -61,6 +61,38 @@ export function RadarDashboard() {
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout>;
+    let pollTimer: ReturnType<typeof setInterval>;
+
+    const applyScanData = (data: {
+      alerts: Alert[];
+      prices: PriceSnapshot[];
+      status: MonitorStatus;
+      newAlerts?: Alert[];
+    }) => {
+      setAlerts(data.alerts);
+      setPrices(data.prices);
+      setStatus(data.status);
+      setLoading(false);
+
+      if (data.newAlerts?.length) {
+        const critical = data.newAlerts.some((a) => a.priority === "critical");
+        if (critical) playAlertSound();
+        setNewAlertIds((prev) => {
+          const next = new Set(prev);
+          for (const a of data.newAlerts!) next.add(a.id);
+          return next;
+        });
+      }
+    };
+
+    const pollAlerts = () => {
+      fetch("/api/alerts")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.alerts) applyScanData(data);
+        })
+        .catch(() => {});
+    };
 
     const connect = () => {
       eventSource = new EventSource("/api/stream");
@@ -77,10 +109,8 @@ export function RadarDashboard() {
           status: MonitorStatus;
           newAlerts: Alert[];
         };
-        setAlerts(data.alerts);
-        setPrices(data.prices);
-        setStatus(data.status);
-        setLoading(false);
+        setConnected(true);
+        applyScanData(data);
       });
 
       eventSource.addEventListener("new_alerts", (e) => {
@@ -110,11 +140,14 @@ export function RadarDashboard() {
       };
     };
 
+    pollAlerts();
+    pollTimer = setInterval(pollAlerts, 60_000);
     connect();
 
     return () => {
       eventSource?.close();
       clearTimeout(reconnectTimer);
+      clearInterval(pollTimer);
     };
   }, [playAlertSound]);
 

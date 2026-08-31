@@ -46,7 +46,13 @@ export function isNoise(
   }
 
   for (const pattern of OPINION_PATTERNS) {
-    if (pattern.test(text)) return true;
+    if (pattern.test(text)) {
+      const hasInstitutionalContext =
+        /\b(fed|federal reserve|cpi|nfp|ppi|pce|sec|cftc|etf|inflation|employment|gdp|treasury|dxy|warsh|jackson hole|rate hike|rate cut|fomc)\b/i.test(
+          text
+        );
+      if (!(credibility >= 9 && hasInstitutionalContext)) return true;
+    }
   }
 
   const emotionalOnly =
