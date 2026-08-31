@@ -17,9 +17,11 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=4317
 ENV X_BROWSER_DISABLED=true
+ENV RADAR_STATE_DIR=/data
 
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+    adduser --system --uid 1001 nextjs && \
+    mkdir -p /data && chown -R nextjs:nodejs /data
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
@@ -29,5 +31,6 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
 USER nextjs
+VOLUME ["/data"]
 EXPOSE 4317
 CMD ["npm", "run", "start"]

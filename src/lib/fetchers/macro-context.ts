@@ -21,6 +21,13 @@ interface YahooChartResponse {
   };
 }
 
+interface FredObservationsResponse {
+  observations?: Array<{
+    date: string;
+    value: string;
+  }>;
+}
+
 async function fetchYahooLastTwo(
   symbol: string
 ): Promise<{ current: number; previous: number } | null> {
@@ -59,6 +66,49 @@ async function fetchYahooLastTwo(
   }
 }
 
+/**
+ * 10-Year Treasury Inflation-Indexed Security (DFII10) — yield real.
+ * Solo se usa si FRED_API_KEY es una clave válida (no placeholder).
+ */
+async function fetchFredDfii10(): Promise<{
+  current: number;
+  previous: number;
+} | null> {
+  const key = process.env.FRED_API_KEY?.trim();
+  if (!key || key === "tu_clave_aqui" || key.toLowerCase().includes("copia")) {
+    return null;
+  }
+
+  try {
+    const url =
+      `https://api.stlouisfed.org/fred/series/observations` +
+      `?series_id=DFII10&api_key=${encodeURIComponent(key)}` +
+      `&file_type=json&sort_order=desc&limit=8`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) {
+      console.warn("[macro] FRED DFII10 HTTP", res.status);
+      return null;
+    }
+
+    const data = (await res.json()) as FredObservationsResponse;
+    const values =
+      data.observations
+        ?.map((o) => ({ date: o.date, value: parseFloat(o.value) }))
+        .filter((o) => Number.isFinite(o.value)) ?? [];
+
+    if (values.length === 0) return null;
+    const current = values[0].value;
+    const previous = values.length >= 2 ? values[1].value : current;
+    return { current, previous };
+  } catch (error) {
+    console.warn("[macro] FRED DFII10 error:", error);
+    return null;
+  }
+}
+
 function directionFromDelta(delta: number): "up" | "down" | "flat" {
   if (delta > 0.02) return "up";
   if (delta < -0.02) return "down";
@@ -75,8 +125,9 @@ export async function fetchMacroContext(
   const now = Date.now();
   if (cachedMacro && now - cachedAt < CACHE_MS) return cachedMacro;
 
-  const [dxyData, tipsData] = await Promise.all([
+  const [dxyData, fredTips, yahooNominal] = await Promise.all([
     fetchYahooLastTwo("DX-Y.NYB"),
+    fetchFredDfii10(),
     fetchYahooLastTwo("^TNX"),
   ]);
 
@@ -84,17 +135,21 @@ export async function fetchMacroContext(
   const dxyPrev = dxyData?.previous ?? dxyLevel;
   const dxyChangePct = ((dxyLevel - dxyPrev) / dxyPrev) * 100;
 
-  const tipsLevel = tipsData?.current ?? 4.2;
-  const tipsPrev = tipsData?.previous ?? tipsLevel;
+  const usingFred = fredTips != null;
+  const tipsLevel = usingFred
+    ? fredTips.current
+    : (yahooNominal?.current ?? 4.2);
+  const tipsPrev = usingFred
+    ? fredTips.previous
+    : (yahooNominal?.previous ?? tipsLevel);
   const tipsChangeBps = (tipsLevel - tipsPrev) * 100;
+
+  const tipsLabel = usingFred
+    ? "Yield real 10Y TIPS (FRED DFII10)"
+    : "Yield 10Y Tesoro (proxy — nominal ^TNX)";
 
   const xau = prices.find((p) => p.symbol === "XAU/USD");
   const btc = prices.find((p) => p.symbol === "BTC/USD");
-
-  const tipsLabel =
-    process.env.FRED_API_KEY
-      ? "Yield real 10Y TIPS (FRED)"
-      : "Yield 10Y Tesoro (proxy — nominal)";
 
   cachedMacro = {
     dxy: {

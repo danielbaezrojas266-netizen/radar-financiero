@@ -15,9 +15,29 @@ CRON_SECRET=elige_un_secreto_largo
 NEXT_PUBLIC_APP_URL=https://radar-financiero-production.up.railway.app
 ALERTS_LOCALE=es
 FINNHUB_API_KEY=tu_clave_finnhub
+FRED_API_KEY=tu_clave_fred
+RADAR_STATE_DIR=/data
 ```
 
 `FINNHUB_API_KEY` es **recomendada** para consenso Wall Street automático (CPI, NFP, PCE, PPI) vía calendario económico. Gratis en [finnhub.io/register](https://finnhub.io/register).
+
+`FRED_API_KEY` es **recomendada** para el yield **real** 10Y TIPS (serie `DFII10`). Gratis en [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html). Sin ella el radar usa `^TNX` nominal con etiqueta explícita de proxy.
+
+## Persistencia (Volume Railway — obligatorio para digests)
+
+El digest y el dedup se guardan en disco. Sin volumen, Railway borra `/tmp` en cada redeploy y se pierden noticias en cola.
+
+1. En el servicio Railway → **Settings** → **Volumes** → **Add Volume**
+2. Mount path: `/data`
+3. Variable (opcional, ya viene en la imagen): `RADAR_STATE_DIR=/data`
+4. Redeploy
+
+Verifica en `GET /api/health`:
+```json
+{ "stateDir": "/data", "statePersistent": true, "stateWritable": true }
+```
+
+Si ves `statePersistent: false`, el volumen no está montado.
 
 ## Telegram — grupo (2+ personas)
 

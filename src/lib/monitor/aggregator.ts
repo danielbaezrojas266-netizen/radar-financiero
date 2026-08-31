@@ -38,7 +38,10 @@ import type {
 } from "@/lib/types";
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2 };
-const SEEN_FILE = stateFile("seen-alerts.json");
+
+function getSeenFile(): string {
+  return stateFile("seen-alerts.json");
+}
 
 let cachedAlerts: Alert[] = [];
 let lastScanTime = "";
@@ -48,8 +51,9 @@ let coldStart = true;
 
 function loadSeenIds(): void {
   try {
-    if (!fs.existsSync(SEEN_FILE)) return;
-    const raw = JSON.parse(fs.readFileSync(SEEN_FILE, "utf-8")) as {
+    const file = getSeenFile();
+    if (!fs.existsSync(file)) return;
+    const raw = JSON.parse(fs.readFileSync(file, "utf-8")) as {
       ids?: string[];
     };
     if (raw.ids?.length) {
@@ -64,7 +68,7 @@ function loadSeenIds(): void {
 function saveSeenIds(): void {
   try {
     fs.writeFileSync(
-      SEEN_FILE,
+      getSeenFile(),
       JSON.stringify({ ids: Array.from(seenIds).slice(-3000) })
     );
   } catch {

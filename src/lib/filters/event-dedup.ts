@@ -7,7 +7,9 @@ import {
 import { stateFile } from "@/lib/monitor/state-dir";
 import type { Alert } from "@/lib/types";
 
-const STATE_FILE = stateFile("alerted-events.json");
+function getAlertedStatePath(): string {
+  return stateFile("alerted-events.json");
+}
 
 function normalizeText(text: string): string {
   return text
@@ -115,8 +117,9 @@ const seenEvents = new Map<
 
 function loadState(): void {
   try {
-    if (!fs.existsSync(STATE_FILE)) return;
-    const raw = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8")) as {
+    const file = getAlertedStatePath();
+    if (!fs.existsSync(file)) return;
+    const raw = JSON.parse(fs.readFileSync(file, "utf-8")) as {
       events?: Record<
         string,
         { alertId: string; lastSentAt: number; mentionCount: number }
@@ -139,13 +142,23 @@ function saveState(): void {
       { alertId: string; lastSentAt: number; mentionCount: number }
     > = {};
     for (const [k, v] of seenEvents) events[k] = v;
-    fs.writeFileSync(STATE_FILE, JSON.stringify({ events }, null, 2));
+    fs.writeFileSync(getAlertedStatePath(), JSON.stringify({ events }, null, 2));
   } catch {
     /* ignore disk errors on ephemeral FS */
   }
 }
 
 loadState();
+
+/** Recarga desde disco (simula proceso nuevo tras redeploy) */
+export function reloadAlertedEventsFromDisk(): void {
+  seenEvents.clear();
+  loadState();
+}
+
+export function peekAlertedEventCount(): number {
+  return seenEvents.size;
+}
 
 /** Agrupa duplicados del mismo evento; conserva el más reciente */
 export function dedupeByEvent(alerts: Alert[]): Alert[] {

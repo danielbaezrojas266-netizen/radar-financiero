@@ -47,8 +47,10 @@ export const GEOPOLITICAL_ESCALATION_PATTERNS: RegExp[] = [
   /\b(hormuz).{0,30}(cerrad|reapert|bloque|tr[aá]nsito)/i,
   /\b(ataque\s+militar|ataque\s+a[eé]reo|misil|contraataque|represalia)\b/i,
   /\b(new\s+round|fresh\s+attack|direct\s+response|kinetic\s+strike)\b/i,
-  /\b(iran|tehran|irgc).{0,50}(strike|attack|missile|bomb|retaliat)/i,
-  /\b(u\.?s\.?|united\s+states|israel|idf).{0,50}(strike|attack|missile|bomb).{0,40}(iran|tehran|irgc)/i,
+  /\b(iran|tehran|irgc).{0,50}(strike|attack|missile|bomb|retaliat|personnel\s+killed)\b/i,
+  /\b(u\.?s\.?|united\s+states|israel|idf).{0,50}(strike|attack|missile|bomb).{0,40}(iran|tehran|irgc)\b/i,
+  /\b(naval\s+blockade|sea\s+mines|intercepted\s+missiles|retaliatory\s+strike|military\s+targets?\s+hit)\b/i,
+  /\b(strikes?\s+(base|american\s+forces)|forces\s+struck|personnel\s+killed|irgc\s+personnel)\b/i,
 ];
 
 /** Análisis o contexto de fondo del conflicto — sí se silencia entre similares */

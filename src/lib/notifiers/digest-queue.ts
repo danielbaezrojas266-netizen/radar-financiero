@@ -7,7 +7,9 @@ import {
 } from "@/lib/config/trader-policy";
 import { stateFile } from "@/lib/monitor/state-dir";
 
-const STATE_FILE = stateFile("digest-queue.json");
+function getDigestStatePath(): string {
+  return stateFile("digest-queue.json");
+}
 
 interface QueueState {
   digestPending: AlertWithTier[];
@@ -29,8 +31,9 @@ let state: QueueState = {
 
 function loadState(): void {
   try {
-    if (fs.existsSync(STATE_FILE)) {
-      const raw = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8")) as Partial<QueueState> & {
+    const file = getDigestStatePath();
+    if (fs.existsSync(file)) {
+      const raw = JSON.parse(fs.readFileSync(file, "utf-8")) as Partial<QueueState> & {
         pending?: AlertWithTier[];
       };
       state = {
@@ -49,13 +52,30 @@ function loadState(): void {
 
 function saveState(): void {
   try {
-    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+    fs.writeFileSync(getDigestStatePath(), JSON.stringify(state, null, 2));
   } catch (error) {
     console.error("[digest-queue] No se pudo guardar estado:", error);
   }
 }
 
 loadState();
+
+/** Recarga desde disco (simula proceso nuevo tras redeploy) */
+export function reloadDigestStateFromDisk(): void {
+  state = {
+    digestPending: [],
+    batch15mPending: [],
+    lastSentMorning: null,
+    lastSentAfternoon: null,
+    lastBatch15mSent: 0,
+    instantSentAt: [],
+  };
+  loadState();
+}
+
+export function peekDigestPending(): AlertWithTier[] {
+  return [...state.digestPending];
+}
 
 function dedupeEnqueue(
   queue: AlertWithTier[],
