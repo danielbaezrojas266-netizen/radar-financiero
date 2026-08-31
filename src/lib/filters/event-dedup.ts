@@ -1,5 +1,9 @@
+import fs from "fs";
+import path from "path";
 import { EVENT_FINGERPRINT_TERMS } from "@/lib/config/keywords";
 import type { Alert } from "@/lib/types";
+
+const STATE_FILE = path.join(process.cwd(), ".alerted-events.json");
 
 function normalizeText(text: string): string {
   return text
@@ -31,6 +35,40 @@ const seenEvents = new Map<
   string,
   { alertId: string; lastSentAt: number; mentionCount: number }
 >();
+
+function loadState(): void {
+  try {
+    if (!fs.existsSync(STATE_FILE)) return;
+    const raw = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8")) as {
+      events?: Record<
+        string,
+        { alertId: string; lastSentAt: number; mentionCount: number }
+      >;
+    };
+    if (raw.events) {
+      for (const [k, v] of Object.entries(raw.events)) {
+        seenEvents.set(k, v);
+      }
+    }
+  } catch {
+    /* fresh */
+  }
+}
+
+function saveState(): void {
+  try {
+    const events: Record<
+      string,
+      { alertId: string; lastSentAt: number; mentionCount: number }
+    > = {};
+    for (const [k, v] of seenEvents) events[k] = v;
+    fs.writeFileSync(STATE_FILE, JSON.stringify({ events }, null, 2));
+  } catch {
+    /* ignore disk errors on ephemeral FS */
+  }
+}
+
+loadState();
 
 /** Agrupa duplicados del mismo evento; conserva el más reciente */
 export function dedupeByEvent(alerts: Alert[]): Alert[] {
@@ -89,6 +127,24 @@ export function markEventsAlerted(alerts: Alert[]): void {
     seenEvents.clear();
     for (const [k, v] of sorted.slice(0, 300)) seenEvents.set(k, v);
   }
+  saveState();
+}
+
+/** Al arrancar en frío: marcar feed actual como ya visto (sin Telegram) */
+export function seedSeenFromFeed(alerts: Alert[]): void {
+  const now = Date.now();
+  let added = 0;
+  for (const alert of alerts) {
+    const key = alert.eventKey ?? buildEventKey(alert);
+    if (seenEvents.has(key)) continue;
+    seenEvents.set(key, {
+      alertId: alert.id,
+      lastSentAt: now,
+      mentionCount: 0,
+    });
+    added++;
+  }
+  if (added > 0) saveState();
 }
 
 export function attachEventKeys(alerts: Alert[]): Alert[] {
@@ -96,4 +152,9 @@ export function attachEventKeys(alerts: Alert[]): Alert[] {
     ...a,
     eventKey: a.eventKey ?? buildEventKey(a),
   }));
+}
+
+export function isAlertFresh(alert: Alert, maxAgeMs: number): boolean {
+  const age = Date.now() - new Date(alert.publishedAt).getTime();
+  return Number.isFinite(age) && age >= 0 && age <= maxAgeMs;
 }

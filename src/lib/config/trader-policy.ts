@@ -8,6 +8,12 @@ export const TRADER_TIMEZONE = "Etc/GMT+6"; // Costa Rica UTC-6
 /** Máximo de alertas instantáneas por hora (fuera de resúmenes) */
 export const MAX_INSTANT_ALERTS_PER_HOUR = 3;
 
+/** Solo alertas publicadas en las últimas N horas pueden ir a Telegram instantáneo */
+export const MAX_INSTANT_AGE_MS = 3 * 60 * 60 * 1000;
+
+/** Prioridad alta (batch 15m): máximo 12 horas de antigüedad */
+export const MAX_BATCH_AGE_MS = 12 * 60 * 60 * 1000;
+
 /** Ventana de agrupación para prioridad ALTA (ms) */
 export const HIGH_PRIORITY_BATCH_MS = 15 * 60 * 1000;
 

@@ -44,4 +44,6 @@ next-env.d.ts
 .x-browser-profile/
 .digest-queue.json
 .macro-releases.json
+.seen-alerts.json
+.alerted-events.json
 

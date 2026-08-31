@@ -19,9 +19,17 @@ import {
   attachEventKeys,
   dedupeByEvent,
   filterAlreadyAlerted,
+  isAlertFresh,
+  seedSeenFromFeed,
 } from "@/lib/filters/event-dedup";
+import {
+  MAX_BATCH_AGE_MS,
+  MAX_INSTANT_AGE_MS,
+} from "@/lib/config/trader-policy";
 import { localizeAlerts } from "@/lib/notifiers/translate-alerts";
 import { FEED_SOURCES } from "@/lib/config/sources";
+import fs from "fs";
+import path from "path";
 import type {
   Alert,
   MacroContextSnapshot,
@@ -30,11 +38,41 @@ import type {
 } from "@/lib/types";
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2 };
+const SEEN_FILE = path.join(process.cwd(), ".seen-alerts.json");
 
 let cachedAlerts: Alert[] = [];
 let lastScanTime = "";
 let lastMacro: MacroContextSnapshot | undefined;
 let seenIds = new Set<string>();
+let coldStart = true;
+
+function loadSeenIds(): void {
+  try {
+    if (!fs.existsSync(SEEN_FILE)) return;
+    const raw = JSON.parse(fs.readFileSync(SEEN_FILE, "utf-8")) as {
+      ids?: string[];
+    };
+    if (raw.ids?.length) {
+      seenIds = new Set(raw.ids.slice(-3000));
+      coldStart = false;
+    }
+  } catch {
+    /* fresh */
+  }
+}
+
+function saveSeenIds(): void {
+  try {
+    fs.writeFileSync(
+      SEEN_FILE,
+      JSON.stringify({ ids: Array.from(seenIds).slice(-3000) })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+loadSeenIds();
 
 function dedupeAlerts(alerts: Alert[]): Alert[] {
   return dedupeByEvent(alerts);
@@ -122,13 +160,32 @@ export async function runScan(): Promise<ScanResult> {
   const enriched = await enrichWithDiscountContext(filtered);
 
   const allAlerts: AlertWithTier[] = enriched;
-  const newAlerts = allAlerts.filter((a) => !seenIds.has(a.id));
 
+  // Arranque en frío / redeploy: marcar feed actual como visto, sin flood Telegram
+  if (coldStart && seenIds.size === 0) {
+    seedSeenFromFeed(allAlerts);
+    for (const alert of allAlerts) seenIds.add(alert.id);
+    saveSeenIds();
+    coldStart = false;
+    console.log(
+      `[Scan] Cold start: ${allAlerts.length} alertas marcadas como vistas (sin Telegram)`
+    );
+  }
+
+  const trulyNew = allAlerts.filter((a) => !seenIds.has(a.id));
+
+  // Solo Telegram para noticias realmente frescas (no datos de hace días)
   const instantCandidates = filterAlreadyAlerted(
-    newAlerts.filter((a) => a.deliveryTier === "instant")
+    trulyNew.filter(
+      (a) =>
+        a.deliveryTier === "instant" && isAlertFresh(a, MAX_INSTANT_AGE_MS)
+    )
   );
-  const batch15mAlerts = newAlerts.filter((a) => a.deliveryTier === "batch_15m");
-  const digestAlerts = newAlerts.filter((a) => a.deliveryTier === "digest");
+  const batch15mAlerts = trulyNew.filter(
+    (a) =>
+      a.deliveryTier === "batch_15m" && isAlertFresh(a, MAX_BATCH_AGE_MS)
+  );
+  const digestAlerts = trulyNew.filter((a) => a.deliveryTier === "digest");
 
   for (const alert of allAlerts) {
     seenIds.add(alert.id);
@@ -137,6 +194,8 @@ export async function runScan(): Promise<ScanResult> {
   if (seenIds.size > 5000) {
     seenIds = new Set(Array.from(seenIds).slice(-2000));
   }
+  saveSeenIds();
+  coldStart = false;
 
   cachedAlerts = allAlerts;
   lastScanTime = new Date().toISOString();
@@ -161,7 +220,7 @@ export async function runScan(): Promise<ScanResult> {
   return {
     alerts: localizedAlerts,
     newAlerts: localizedAlerts.filter((a) =>
-      newAlerts.some((n) => n.id === a.id)
+      trulyNew.some((n) => n.id === a.id)
     ),
     instantAlerts: localizedAlerts.filter((a) =>
       instantCandidates.some((n) => n.id === a.id)
