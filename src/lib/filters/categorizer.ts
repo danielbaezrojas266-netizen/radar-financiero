@@ -2,6 +2,7 @@ import {
   CATEGORY_KEYWORDS,
   CRITICAL_BOOST_TERMS,
 } from "@/lib/config/keywords";
+import { GEOPOLITICAL_ESCALATION_PATTERNS } from "@/lib/config/trader-policy";
 import { hasRelevantKeyword, isNoise } from "@/lib/filters/noise-filter";
 import type {
   Alert,
@@ -46,11 +47,15 @@ function resolvePriority(
 ): AlertPriority {
   const lower = text.toLowerCase();
 
+  if (GEOPOLITICAL_ESCALATION_PATTERNS.some((p) => p.test(text))) {
+    return "critical";
+  }
+
   const analystOnly =
     /\b(analyst|analista|bank forecasts|projection|outlook|price target|estimates|guidance)\b/i.test(
       lower
     ) &&
-    !/\b(cpi|ppi|fomc|nfp|pce|sec|etf|bankruptcy|hack|invasion|sanctions)\b/i.test(
+    !/\b(cpi|ppi|fomc|nfp|pce|sec|etf|bankruptcy|hack|invasion|sanctions|strike|hormuz|iran|missile)\b/i.test(
       lower
     );
   if (analystOnly) return "medium";

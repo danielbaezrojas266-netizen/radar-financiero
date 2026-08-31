@@ -7,6 +7,7 @@ export const APPROVED_RSS_IDS = new Set([
   "google-gold",
   "google-markets",
   "google-btc",
+  "google-geopolitics",
   "investing-commodities",
   "sec-press",
 ]);

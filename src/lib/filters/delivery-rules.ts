@@ -12,6 +12,7 @@ import {
   detectConsensusNote,
 } from "@/lib/filters/cross-verify";
 import { buildDiscountContext } from "@/lib/filters/discount-context";
+import { isGeopoliticalEscalation } from "@/lib/filters/event-dedup";
 import type { Alert, DeliveryTier, MacroContextSnapshot } from "@/lib/types";
 
 export type AlertWithTier = Alert & { deliveryTier: DeliveryTier };
@@ -21,6 +22,7 @@ function textOf(alert: Alert): string {
 }
 
 function isCriticalEvent(alert: Alert): boolean {
+  if (isGeopoliticalEscalation(alert)) return true;
   const text = textOf(alert);
   return CRITICAL_EVENT_TERMS.some((t) => {
     if (t.includes(" ")) return text.includes(t);
@@ -37,6 +39,14 @@ function isHighTierEvent(alert: Alert): boolean {
 function assignTier(alert: Alert, macro?: MacroContextSnapshot): DeliveryTier {
   if (!isApprovedSource(alert.sourceId, alert.sourceName)) {
     return "dropped";
+  }
+
+  // Escalada geopolítica (nuevo ataque / Ormuz) → instantáneo si es fresco
+  if (isGeopoliticalEscalation(alert) && canBeCriticalInstant({
+    ...alert,
+    priority: "critical",
+  })) {
+    return "instant";
   }
 
   if (alert.priority === "medium") {
@@ -82,14 +92,19 @@ export function applyDeliveryRules(
 
   return verified
     .map((alert) => {
-      const tier = assignTier(alert, macro);
-      const consensusNote = detectConsensusNote(textOf(alert));
+      const escalated = isGeopoliticalEscalation(alert)
+        ? { ...alert, priority: "critical" as const, category: alert.category === "geopolitics" ? alert.category : ("geopolitics" as const) }
+        : alert;
+      const tier = assignTier(escalated, macro);
+      const consensusNote = detectConsensusNote(textOf(escalated));
       return {
-        ...alert,
+        ...escalated,
         deliveryTier: tier,
-        macroContext: alert.assets.includes("XAU") ? macro : alert.macroContext,
-        consensusNote: consensusNote ?? alert.consensusNote,
-        priceReactionNote: buildPriceReactionNote(alert, macro),
+        macroContext: escalated.assets.includes("XAU")
+          ? macro
+          : escalated.macroContext,
+        consensusNote: consensusNote ?? escalated.consensusNote,
+        priceReactionNote: buildPriceReactionNote(escalated, macro),
       };
     })
     .filter((a) => a.deliveryTier !== "dropped");

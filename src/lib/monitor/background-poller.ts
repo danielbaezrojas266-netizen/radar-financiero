@@ -42,6 +42,7 @@ export function startBackgroundPoller(): void {
         `🔴 CRÍTICO → instantáneo (máx. 3/h)\n` +
         `🟠 ALTA → cada 15 min\n` +
         `🟡 Resúmenes → 7:00 y 16:30 (${tz})\n` +
+        `📅 Cobertura 7 días / 24h (finde y feriados inclusive)\n` +
         `📡 Servidor activo 24/7`
     ).catch(() => {});
   }

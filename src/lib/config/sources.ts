@@ -87,6 +87,18 @@ export const FEED_SOURCES: FeedSource[] = [
     enabled: true,
   },
   {
+    id: "google-geopolitics",
+    name: "Google News — Geopolítica / Ormuz",
+    url: googleNewsQuery(
+      "(Iran OR Hormuz OR \"Strait of Hormuz\" OR airstrike OR \"missile strike\" OR retaliation) (gold OR oil OR markets OR attack) when:2d"
+    ),
+    type: "rss",
+    credibility: 9,
+    categories: ["geopolitics"],
+    assets: ["XAU", "BTC"],
+    enabled: true,
+  },
+  {
     id: "investing-commodities",
     name: "Investing.com — Commodities",
     url: "https://www.investing.com/rss/news_301.rss",
