@@ -123,7 +123,8 @@ export function getLocalTimeMinutes(timezone: string): number {
     parts.find((p) => p.type === "minute")?.value ?? "0",
     10
   );
-  return hour * 60 + minute;
+  const h = hour === 24 ? 0 : hour;
+  return h * 60 + minute;
 }
 
 export function formatCostaRicaTime(iso?: string): string {
@@ -135,20 +136,18 @@ export function formatCostaRicaTime(iso?: string): string {
   }).format(d);
 }
 
-const DIGEST_SLOTS = [
-  { key: "morning" as const, hour: 7, minute: 0 },
-  { key: "afternoon" as const, hour: 16, minute: 30 },
-];
-
 export function shouldSendDigest(): "morning" | "afternoon" | null {
   const tz = getTimezone();
   const nowMinutes = getLocalTimeMinutes(tz);
   const today = getLocalDateKey(tz);
 
-  for (const slot of DIGEST_SLOTS) {
-    const slotMinutes = slot.hour * 60 + slot.minute;
-    const diff = nowMinutes - slotMinutes;
-    if (diff >= 0 && diff <= 3) {
+  const slots = [
+    { key: "morning" as const, start: 7 * 60, end: 7 * 60 + 45 },
+    { key: "afternoon" as const, start: 16 * 60 + 30, end: 16 * 60 + 75 },
+  ];
+
+  for (const slot of slots) {
+    if (nowMinutes >= slot.start && nowMinutes <= slot.end) {
       if (slot.key === "morning" && state.lastSentMorning !== today) {
         return "morning";
       }

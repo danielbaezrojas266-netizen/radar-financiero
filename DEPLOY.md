@@ -19,6 +19,19 @@ FINNHUB_API_KEY=tu_clave_finnhub
 
 `FINNHUB_API_KEY` es **recomendada** para consenso Wall Street automático (CPI, NFP, PCE, PPI) vía calendario económico. Gratis en [finnhub.io/register](https://finnhub.io/register).
 
+## Telegram — grupo (2+ personas)
+
+1. Crea un grupo e invita a los miembros
+2. Añade **@radar_financiero_2026_bot** y hazlo **administrador**
+3. Escribe un mensaje en el grupo (ej. `hola`)
+4. Obtén el ID del grupo abriendo en el navegador (sustituye `TU_TOKEN`):
+   `https://api.telegram.org/botTU_TOKEN/getUpdates`
+5. Busca `"chat":{"id":-100xxxxxxxxxx` — ese número **negativo** es `TELEGRAM_CHAT_ID`
+6. Actualiza la variable en Railway y redeploy
+7. Prueba con `POST /api/telegram/test`
+
+**Grupo + chat privado:** `-1001234567890,6458076817` (IDs separados por coma)
+
 ## Opción A — Railway (recomendado, ~5 min)
 
 1. Crea cuenta en [railway.app](https://railway.app) (GitHub login)
@@ -38,6 +51,19 @@ El poller interno arranca solo y envía:
 2. **New** → **Blueprint** → conecta el repo (usa `render.yaml`)
 3. Configura los secretos cuando te los pida
 4. Deploy
+
+## Backup — Cron externo (IMPORTANTE para 24/7)
+
+Configura un cron gratis en [cron-job.org](https://cron-job.org) — **sin esto el radar puede quedarse sin enviar Telegram si el poller interno no arranca**:
+
+1. Crea cuenta en cron-job.org
+2. **Create cronjob**
+3. URL: `https://radar-financiero-production.up.railway.app/api/cron?secret=TU_CRON_SECRET`
+   - Usa el **mismo** `CRON_SECRET` que tienes en Railway Variables
+4. Intervalo: **cada 5 minutos**
+5. Método: GET
+
+Esto ejecuta scan + Telegram cada 5 min y envía resúmenes a las 7:00 y 16:30 (CR).
 
 ## Backup — Cron externo (por si el free tier se duerme)
 
